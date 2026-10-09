@@ -5,3 +5,11 @@ __pycache__/
 *.json
 coverage.xml
 .htmlcov/
+.coverage
+*.egg-info/
+
+config.toml
+.env.*
+!.env.example
+data/cache/
+data/raw/
