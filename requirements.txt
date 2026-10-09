@@ -1,4 +1,4 @@
 requests
-pytest
-pytest-cov
 python-dotenv
+pytest>=8
+pytest-cov>=5
