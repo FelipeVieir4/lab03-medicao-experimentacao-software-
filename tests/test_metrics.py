@@ -1,59 +1,77 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
-from datetime import datetime
-from src.metrics import calculate_cfr_proxy_ci, calculate_recovery_time, get_dora_classification_cfr, get_dora_classification_recovery_time
 
-@pytest.fixture
-def workflow_runs_cfr_sample():
-    return [
-        {'conclusion': 'success'},
-        {'conclusion': 'failure'},
-        {'conclusion': 'success'},
-        {'conclusion': 'timed_out'},
-        {'conclusion': 'cancelled'},  # Should be ignored
-        {'conclusion': 'startup_failure'},
+from pipeline.metrics import (
+    change_failure_rate,
+    classify_metric,
+    classify_repository,
+    deployment_frequency,
+    lead_time_by_commit,
+    lead_time_by_release,
+    recovery_time,
+)
+
+
+UTC = timezone.utc
+
+
+def test_deployment_frequency_uses_releases_per_week():
+    assert deployment_frequency([datetime.now(UTC)] * 7, weeks=1) == 7
+
+
+def test_lead_time_variants_and_empty_release():
+    release = datetime(2026, 1, 15, tzinfo=UTC)
+    commits = [datetime(2026, 1, 2, tzinfo=UTC), datetime(2026, 1, 10, tzinfo=UTC)]
+    data = [(release, commits), (release, [])]
+
+    assert lead_time_by_release(data) == 13
+    assert lead_time_by_commit(data) == 9
+    assert lead_time_by_release([(release, [])]) is None
+
+
+def test_change_failure_rate_ignores_cancelled_runs():
+    assert change_failure_rate(["success", "failure", "cancelled", "skipped"]) == 0.5
+    assert change_failure_rate(["cancelled"]) is None
+
+
+def test_recovery_time_and_censored_episode():
+    start = datetime(2026, 1, 1, 10, tzinfo=UTC)
+    runs = [
+        {"conclusion": "success", "run_started_at": start, "updated_at": start},
+        {
+            "conclusion": "failure",
+            "run_started_at": start + timedelta(hours=1),
+            "updated_at": start + timedelta(hours=1, minutes=10),
+        },
+        {
+            "conclusion": "failure",
+            "run_started_at": start + timedelta(hours=2),
+            "updated_at": start + timedelta(hours=2, minutes=10),
+        },
+        {
+            "conclusion": "success",
+            "run_started_at": start + timedelta(hours=3),
+            "updated_at": start + timedelta(hours=3, minutes=20),
+        },
     ]
 
-@pytest.fixture
-def workflow_runs_recovery_sample():
-    return [
-        {'workflow_id': 1, 'conclusion': 'success', 'created_at': '2024-01-01T09:00:00Z', 'run_started_at': '2024-01-01T09:00:00Z', 'updated_at': '2024-01-01T09:10:00Z'},
-        # Episode starts here
-        {'workflow_id': 1, 'conclusion': 'failure', 'created_at': '2024-01-01T10:00:00Z', 'run_started_at': '2024-01-01T10:00:00Z', 'updated_at': '2024-01-01T10:10:00Z'},
-        {'workflow_id': 1, 'conclusion': 'failure', 'created_at': '2024-01-01T10:30:00Z', 'run_started_at': '2024-01-01T10:30:00Z', 'updated_at': '2024-01-01T10:40:00Z'},
-        # Episode ends here
-        {'workflow_id': 1, 'conclusion': 'success', 'created_at': '2024-01-01T11:15:00Z', 'run_started_at': '2024-01-01T11:15:00Z', 'updated_at': '2024-01-01T11:20:00Z'},
-        # Episode that gets censored (no success after it)
-        {'workflow_id': 1, 'conclusion': 'failure', 'created_at': '2024-01-01T12:00:00Z', 'run_started_at': '2024-01-01T12:00:00Z', 'updated_at': '2024-01-01T12:10:00Z'},
-    ]
+    assert recovery_time(runs) == (pytest.approx(2.333333), 0)
 
-def test_calculate_cfr_proxy_ci(workflow_runs_cfr_sample):
-    cfr = calculate_cfr_proxy_ci(workflow_runs_cfr_sample)
-    # successes = 2, failures = 3 (failure, timed_out, startup_failure)
-    assert cfr == 3 / 5
+    runs[-1]["conclusion"] = "failure"
+    assert recovery_time(runs) == (None, 1)
 
-def test_calculate_cfr_empty():
-    assert calculate_cfr_proxy_ci([]) is None
 
-def test_calculate_recovery_time(workflow_runs_recovery_sample):
-    metrics = calculate_recovery_time(workflow_runs_recovery_sample)
-    
-    # Episode 1: start = 10:00:00, success = 11:20:00 -> delta = 1 hour 20 minutes = 1.333... hours
-    expected_recovery_time = (datetime(2024, 1, 1, 11, 20) - datetime(2024, 1, 1, 10, 0)).total_seconds() / 3600
-    assert metrics['median_recovery_time_hours'] == pytest.approx(expected_recovery_time)
-    
-    # 2 episodes total, 1 is censored
-    assert metrics['total_episodes'] == 2
-    assert metrics['censored_ratio'] == 0.5
-
-def test_dora_classification():
-    assert get_dora_classification_cfr(0.10) == 'Elite'
-    assert get_dora_classification_cfr(0.20) == 'High'
-    assert get_dora_classification_cfr(0.40) == 'Medium'
-    assert get_dora_classification_cfr(0.50) == 'Low'
-    assert get_dora_classification_cfr(None) is None
-    
-    assert get_dora_classification_recovery_time(0.5) == 'Elite'
-    assert get_dora_classification_recovery_time(12) == 'High'
-    assert get_dora_classification_recovery_time(48) == 'Medium'
-    assert get_dora_classification_recovery_time(200) == 'Low'
-    assert get_dora_classification_recovery_time(None) is None
+def test_dora_thresholds_and_repository_classification():
+    assert classify_metric("deployment_frequency", 7) == "Elite"
+    assert classify_metric("lead_time_days", 7) == "Medium"
+    assert classify_metric("change_failure_rate", 0.30) == "High"
+    assert classify_metric("recovery_hours", 24) == "Medium"
+    assert classify_repository(
+        {
+            "deployment_frequency": 2,
+            "lead_time_days": 2,
+            "change_failure_rate": 0.2,
+            "recovery_hours": 12,
+        }
+    ) == "High"
