@@ -1,9 +1,31 @@
 [collection]
-start_date = "2025-01-01"
-end_date = "2025-12-31"
-max_repositories = 100
-stars_query = "stars:>1000"
+# Janela de observação: 12 meses fechando em 02/10/2026 (abertura da Sprint 01)
+start_date = "2025-10-02"
+end_date = "2026-10-01"
+
+# Seleção (seção 3 do guia)
+min_stars = 1000          # candidatos com >= 1000 estrelas, não arquivados e não forks
+min_releases = 5          # releases publicadas (não draft, não pré-release) na janela
+min_runs = 50             # workflow runs válidos de push no default branch na janela
+
+# Parada: a coleta processa candidatos em lotes até ter target_sample elegíveis
+target_sample = 350       # o guia exige >= 300 após os filtros; 350 dá folga
+max_candidates = 6000
+batch_size = 100
+
+# 0 = automático (2 threads por token, máx. 6)
+workers = 0
+# Threads dentro de cada repositório (meses de runs e pares de releases em paralelo).
+# 1 = desliga. Valores altos aumentam o risco de "secondary rate limit".
+inner_workers = 4
+# Runs: a API devolve no máx. 1.000 por consulta. Com false, cada mês é limitado a
+# 1.000 runs (os mais recentes do mês) e o mês é registrado em runs_capped_days.
+# Com true, o mês é subdividido até caber (repos muito ativos custam milhares de chamadas).
+split_capped_runs = false
+collect_tags = true       # tags com data do commit (GraphQL), variante da RQ 07
+seed = 42                 # semente do sorteio da amostra-ouro
 
 [paths]
 cache_dir = "data/cache"
 output_dir = "data/raw"
+processed_dir = "data/processed"

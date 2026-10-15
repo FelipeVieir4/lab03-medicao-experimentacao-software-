@@ -12,4 +12,12 @@ config.toml
 .env.*
 !.env.example
 data/cache/
-data/raw/
+
+# dados locais (regeneráveis pelo pipeline)
+data/raw/repos/
+data/raw/*.backup.csv
+data/processed/release_commits.csv
+data/processed/release_commits.csv.gz
+data/processed/workflow_runs.csv
+data/smoke/
+data/cache_broken/
