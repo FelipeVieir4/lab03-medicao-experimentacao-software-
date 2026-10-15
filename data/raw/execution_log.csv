@@ -1,0 +1,10 @@
+started_at,finished_at,status,duration_min,n_tokens,workers,inner_workers,api_calls,cache_hits,calls_by_token,token_switches,ratelimit_wait_min,secondary_wait_s,retries_5xx_network,backoff_s,candidates_processed,eligible,calls_per_hour,min_hours_single_token,speedup_vs_single_token
+2026-10-15T00:32:08,2026-10-15T00:34:53,interrupted (teste inicial; horário convertido de UTC),2.7,2,4,4,898,1791,...pLXS:898;...pzmZ:0,0,0.0,0,19,19,0,0,19612,0.18,3.92
+2026-10-15T00:56:09,2026-10-15T01:06:59,interrupted,10.8,2,4,4,7856,2686,...pLXS:3374;...pzmZ:4482,1,0.0,0,0,0,0,0,43473,1.57,8.69
+2026-10-15T01:07:04,2026-10-15T05:35:20,reconstructed_from_log (PC reiniciou; sem linha gravada),268.3,2,4,4,49880,10497,,,,,,,500,210,11255,9.98,2.25
+2026-10-15T07:35:49,2026-10-15T07:52:47,interrupted,17.0,2,4,4,10314,60022,...pLXS:5225;...pzmZ:5089,4,0.0,0,4,4,600,254,36476,2.06,7.3
+2026-10-15T08:09:26,2026-10-15T08:17:58,interrupted,8.5,2,4,4,22,70166,...pLXS:11;...pzmZ:11,1,0.0,0,0,0,600,254,155,0.0,0.03
+2026-10-15T08:18:00,2026-10-15T08:37:50,interrupted,19.8,3,6,4,6912,70166,...pLXS:1813;...pzmZ:13;...YgxI:5086,5,11.3,0,3,3,700,295,20916,1.38,4.18
+2026-10-15T08:37:51,2026-10-15T08:42:52,interrupted,5.0,4,6,4,4785,76777,...pLXS:3480;...pzmZ:7;...YgxI:13;...Fs7d:1285,3,0.0,0,0,0,700,295,57302,0.96,11.46
+2026-10-15T08:43:05,2026-10-15T08:44:20,interrupted,1.2,3,6,4,269,81520,...pLXS:8;...pzmZ:261;...YgxI:0,1,0.0,0,0,0,700,295,12953,0.05,2.59
+2026-10-15T08:44:21,2026-10-15T08:57:09,completed,12.8,5,6,4,9024,81789,...pLXS:127;...pzmZ:4770;...YgxI:4;...Fs7d:3688;...CVuB:435,4,0.0,0,0,0,900,383,42299,1.8,8.46

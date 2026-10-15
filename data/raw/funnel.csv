@@ -1,0 +1,5 @@
+stage,description,count,discarded,discard_reasons
+candidates,"candidatos (busca, >= min_stars, não arquivados, não forks)",900,0,
+with_actions,usam GitHub Actions,817,83,no_actions=83
+min_releases,>= 5 releases publicadas (não pré-release) na janela,441,376,few_releases=376
+eligible,>= 50 workflow runs válidos de push no default branch,383,58,few_workflow_runs=58
