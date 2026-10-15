@@ -17,6 +17,9 @@ pipeline/dataset.py        consolida os JSONs em CSVs e calcula as métricas
 pipeline/metrics.py        funções puras das métricas DORA
 analysis/descritivas.py    estatística descritiva das RQs 01-04 e classificação DORA (C1)
 analysis/correlacoes.py    RQ 05: Spearman entre deployment frequency e CFR (a) e (b)
+analysis/concordancia.py   amostra-ouro: kappa de Fleiss e rótulo de consenso
+analysis/heuristica.py     amostra-ouro: precisão, recall e F1 da heurística de release corretiva
+docs/protocolo-rotulagem.md  como rotular, protocolo de desempate e refinamento da heurística
 tests/                     testes com fixtures, sem chamadas à API
 docs/dicionario-de-dados.md  documentação de cada coluna dos CSVs
 docs/decisoes-metodologicas.md  decisões da coleta e seus efeitos (base da Metodologia)
@@ -123,6 +126,22 @@ variantes (a) e (b), com ρ, p-valor e n. Saída em `reports/resultados/rq05/`
 (`spearman.csv`, `dispersao.png` com eixo x em escala log e `rq05.md`). O teste é
 implementado com a biblioteca padrão (postos com média nos empates e teste t com
 n − 2 g.l., o mesmo método do `scipy.stats.spearmanr`); só os gráficos usam matplotlib.
+
+### Validação manual (amostra-ouro)
+
+Depois que cada avaliador preencher `data/gold/rotulos_<usuario>.csv` (valores aceitos e
+critérios em `docs/protocolo-rotulagem.md`):
+
+```bash
+python -m analysis.concordancia
+python -m analysis.heuristica
+```
+
+O primeiro calcula o kappa de Fleiss das três dimensões, gera `data/gold/consenso.csv` e
+lista em `data/gold/divergencias.csv` os casos sem maioria. Depois da reunião, preencha a
+coluna `decisao` e rode o comando de novo. O segundo compara cada versão da heurística com
+o consenso (precisão, recall e F1, meta F1 ≥ 0,70). Os resultados ficam em
+`reports/resultados/validacao/`.
 
 ## Como a seleção economiza cota
 
