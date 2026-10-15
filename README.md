@@ -1,115 +1,118 @@
 # Lab 03: Mineração de métricas DORA
 
-Pipeline inicial da Sprint 01 para coletar dados públicos de repositórios GitHub
-e calcular as métricas DORA como proxies. A especificação completa está em
+Pipeline reprodutível que seleciona repositórios populares do GitHub que usam
+GitHub Actions, coleta releases, commits entre releases, workflow runs e tags, e
+calcula as métricas DORA como proxies. A especificação completa está em
 [guide/03 - Mineração de Métricas DORA.md](guide/03%20-%20Minera%C3%A7%C3%A3o%20de%20M%C3%A9tricas%20DORA.md).
 
 ## Arquitetura
 
 ```text
-pipeline/__main__.py       CLI e comando único
-pipeline/config.py         configuração TOML e caminhos
-pipeline/github_client.py  REST próprio, cache, paginação, retries e rate limit
-pipeline/collector.py      candidatos, metadados, releases, runs e funil
-pipeline/metrics.py        funções puras testáveis das métricas DORA
-tests/                     fixtures e testes sem chamadas à API
+pipeline/__main__.py       CLI: comando único (coleta + dataset)
+pipeline/config.py         configuração TOML
+pipeline/github_client.py  cliente REST/GraphQL próprio: cache SQLite, paginação por Link,
+                           rate limit, backoff exponencial e rodízio de tokens
+pipeline/collector.py      busca fatiada, funil de seleção e coleta por repositório
+pipeline/dataset.py        consolida os JSONs em CSVs e calcula as métricas
+pipeline/metrics.py        funções puras das métricas DORA
+tests/                     testes com fixtures, sem chamadas à API
+docs/dicionario-de-dados.md  documentação de cada coluna dos CSVs
+docs/decisoes-metodologicas.md  decisões da coleta e seus efeitos (base da Metodologia)
 ```
 
-O cliente usa apenas a biblioteca padrão para acessar a API. Nenhuma biblioteca
-pronta de acesso ao GitHub é usada.
+Só a biblioteca padrão do Python acessa a API. Nenhuma biblioteca pronta de
+acesso ao GitHub é usada.
 
-## Executar a coleta
+## Executar
 
-### 1. Instalar as dependências
+Requer Python 3.10 ou superior.
 
-Na raiz do projeto, execute:
+### 1. Instalar
 
 ```bash
 python -m pip install -e ".[dev]"
 ```
 
-### 2. Configurar o token do GitHub
+### 2. Token do GitHub
 
-Crie um arquivo local chamado `.env` com o token do GitHub:
+Crie um arquivo `.env` na raiz do projeto (ele é ignorado pelo Git):
 
 ```env
-GITHUB_TOKEN=seu_token_do_github
+GITHUB_TOKEN=seu_token
 ```
 
-O arquivo `.env` é ignorado pelo Git. Nunca coloque o token no `README`, em
-`config.toml` ou em arquivos commitados.
+Um token clássico sem escopos basta (só dados públicos). Com mais de um token, a
+coleta alterna entre eles e fica mais rápida:
 
-Carregue o token no terminal atual:
+```env
+GITHUB_TOKENS=token1,token2,token3
+```
+
+O pipeline lê o `.env` sozinho. Também aceita a variável de ambiente já definida
+no terminal.
+
+### 3. Configuração
 
 ```bash
-set -a
-source .env
-set +a
+cp config.toml.example config.toml        # Windows: copy config.toml.example config.toml
 ```
 
-### 3. Criar a configuração da coleta
+A janela padrão é 2025-10-02 a 2026-10-01. A coleta para quando encontra
+`target_sample` repositórios elegíveis (padrão 350; o guia exige ao menos 300).
+Para um teste rápido, use `target_sample = 2` e `batch_size = 5`.
 
-```bash
-cp config.toml.example config.toml
-```
-
-Abra `config.toml` e substitua `start_date` e `end_date` pela janela de 12 meses
-definida pelo professor. Para o primeiro teste, use:
-
-```toml
-max_repositories = 2
-```
-
-### 4. Fazer a primeira coleta
+### 4. Rodar (comando único)
 
 ```bash
 python -m pipeline --config config.toml
 ```
 
-Esse comando busca candidatos com mais de 1.000 estrelas e coleta, para cada
-repositório, workflows, releases publicadas e workflow runs de `push` no
-default branch.
+O comando faz a coleta e depois gera o dataset. Também é possível rodar as
+etapas separadamente: `--step collect` ou `--step dataset` (este último só lê os
+arquivos locais e não usa a API).
 
-### 5. Conferir os resultados
+**Retomada:** toda resposta da API é gravada em `data/cache/github_cache.sqlite`
+no momento em que chega. Se a coleta parar (rate limit, queda de rede, `Ctrl+C`,
+computador desligado), basta rodar o mesmo comando: o que já foi baixado vem do
+cache e a coleta continua de onde parou.
 
-Os arquivos são gravados em:
+**Rate limit:** o cliente lê `X-RateLimit-Remaining`/`X-RateLimit-Reset` e
+espera sozinho quando a cota acaba; erros 5xx e de rede são repetidos com
+backoff exponencial (1 s, 2 s, 4 s, ...).
+
+**Vários tokens:** para acrescentar um token no meio da coleta, interrompa com
+`Ctrl+C`, edite o `GITHUB_TOKENS` no `.env` e rode o mesmo comando de novo.
+
+### 5. Saídas
 
 ```text
-data/raw/*.json     dados organizados por repositório
-data/raw/funnel.csv  funil de seleção
-data/cache/*.json   respostas originais da API
+data/raw/funnel.csv            funil de seleção (tabela da Metodologia)
+data/raw/screening.csv         situação de cada candidato avaliado
+data/raw/repos/*.json          dados brutos de cada repositório elegível
+data/raw/execution_log.csv     métricas de cada execução (tempo, chamadas por token, esperas, speedup)
+data/raw/token_events.csv      trocas e esgotamentos de token
+data/raw/collect.log           log completo
+data/processed/*.csv           dataset final e métricas (ver docs/dicionario-de-dados.md)
+data/processed/gold_sample_template.csv  amostra-ouro sorteada (seed 42) para rotulagem
+data/gold/rotulos_<avaliador>.csv         planilha de rotulagem de cada avaliador
 ```
 
-O funil informa quantos candidatos possuem Actions e quantos atendem ao mínimo
-de 5 releases e 50 workflow runs válidos.
+Os arquivos grandes não vão para o Git: o cache (`data/cache/`, ~1,5 GB), os JSONs
+brutos (`data/raw/repos/`, ~1,5 GB) e `release_commits.csv.gz` (~190 MB). Eles são
+regenerados pelo pipeline. `workflow_runs.csv.gz` (~30 MB) é versionado compactado.
 
-### 6. Executar com 100 repositórios
+## Como a seleção economiza cota
 
-Depois de conferir a primeira execução, altere em `config.toml`:
+Cada candidato passa pelas etapas mais baratas primeiro e só segue se for
+aprovado: workflows (1 chamada) → releases na janela → contagem de runs (1
+chamada) → runs completos mês a mês → para os elegíveis, `compare` entre
+releases, tags (GraphQL) e contribuidores. A busca de candidatos é fatiada por
+faixas de estrelas porque a API devolve no máximo 1.000 resultados por consulta,
+e os runs são buscados mês a mês, com subdivisão automática de qualquer
+intervalo que passe de 1.000 resultados.
 
-```toml
-max_repositories = 100
-```
-
-Execute novamente:
-
-```bash
-python -m pipeline --config config.toml
-```
-
-O cache em `data/cache/` permite retomar a coleta após interrupção sem repetir
-respostas já obtidas. Para interromper com segurança, use `Ctrl+C` e execute o
-mesmo comando novamente depois.
-
-Para testar sem consumir a API:
+## Testes
 
 ```bash
 pytest --cov=pipeline.metrics --cov-report=term-missing
 ```
-
-## Sprint 01
-
-Esta base implementa a coleta de candidatos, workflows, releases publicadas e
-workflow runs de `push` no default branch, além do filtro mínimo de 5 releases e
-50 runs válidos. A coleta de commits entre releases e a consolidação das métricas
-por repositório serão as próximas fatias da sprint.
