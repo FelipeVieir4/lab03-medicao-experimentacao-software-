@@ -17,6 +17,7 @@ pipeline/dataset.py        consolida os JSONs em CSVs e calcula as métricas
 pipeline/metrics.py        funções puras das métricas DORA
 analysis/descritivas.py    estatística descritiva das RQs 01-04 e classificação DORA (C1)
 analysis/correlacoes.py    RQ 05: Spearman entre deployment frequency e CFR (a) e (b)
+analysis/rotular.py        amostra-ouro: ferramenta interativa de rotulação
 analysis/concordancia.py   amostra-ouro: kappa de Fleiss e rótulo de consenso
 analysis/heuristica.py     amostra-ouro: precisão, recall e F1 da heurística de release corretiva
 docs/protocolo-rotulagem.md  como rotular, protocolo de desempate e refinamento da heurística
@@ -129,8 +130,14 @@ n − 2 g.l., o mesmo método do `scipy.stats.spearmanr`); só os gráficos usam
 
 ### Validação manual (amostra-ouro)
 
-Depois que cada avaliador preencher `data/gold/rotulos_<usuario>.csv` (valores aceitos e
-critérios em `docs/protocolo-rotulagem.md`):
+Cada avaliador preenche `data/gold/rotulos_<usuario>.csv`, à mão ou com a ferramenta
+interativa (valores aceitos e critérios em `docs/protocolo-rotulagem.md`):
+
+```bash
+python -m analysis.rotular --avaliador <usuario>
+```
+
+Depois que todos terminarem:
 
 ```bash
 python -m analysis.concordancia

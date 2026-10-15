@@ -16,6 +16,20 @@ e #10 (avaliação da heurística).
 - Só se preenchem as três colunas finais. As demais (repo, tag e links) não são alteradas.
 - O arquivo é commitado na issue #8 depois de rotulado por inteiro.
 
+### Ferramenta de rotulação (opcional)
+
+```bash
+python -m analysis.rotular --avaliador <usuario-github>
+```
+
+A ferramenta percorre a planilha do avaliador, abre no navegador o repositório, a release
+e o compare, e lê cada resposta com uma tecla: `b`/`a`/`c`/`o` para o tipo, `s`/`n`/`i`
+para entrega real e `s`/`n` para corretiva. Os outros comandos são `v` (voltar), `p`
+(pular), `r` (reabrir os links) e `q` (salvar e sair). Ela salva a cada resposta e retoma
+de onde parou. Só lê a planilha do próprio avaliador, sem os rótulos dos colegas e sem a
+saída da heurística. Opções: `--sem-compare` abre só a release; `--sem-navegador` apenas
+mostra os links.
+
 | Coluna | Nível | Valores aceitos | Como decidir |
 |---|---|---|---|
 | `tipo_projeto` | repositório | `biblioteca`, `aplicacao`, `cli`, `outro` | Pelo README: biblioteca/framework (é importada por outro código), aplicação/serviço (é executada ou implantada pelo usuário final), ferramenta de linha de comando, ou outro (docs, listas, dados, modelos) |
