@@ -1,0 +1,4 @@
+variant,x,y,label,n,rho,p_value
+a,deployment_frequency,cfr_ci,CFR (a): falha de pipeline,383,0.16082177458095018,0.0015905491548860464
+b,deployment_frequency,cfr_delivery,CFR (b): falha de entrega,381,0.5073143851733207,2.602846119144175e-26
+a_vs_b,cfr_ci,cfr_delivery,CFR (a) × CFR (b),381,0.1384041622251655,0.006816097251104603

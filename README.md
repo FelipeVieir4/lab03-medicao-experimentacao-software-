@@ -15,6 +15,8 @@ pipeline/github_client.py  cliente REST/GraphQL próprio: cache SQLite, paginaç
 pipeline/collector.py      busca fatiada, funil de seleção e coleta por repositório
 pipeline/dataset.py        consolida os JSONs em CSVs e calcula as métricas
 pipeline/metrics.py        funções puras das métricas DORA
+analysis/descritivas.py    estatística descritiva das RQs 01-04 e classificação DORA (C1)
+analysis/correlacoes.py    RQ 05: Spearman entre deployment frequency e CFR (a) e (b)
 tests/                     testes com fixtures, sem chamadas à API
 docs/dicionario-de-dados.md  documentação de cada coluna dos CSVs
 docs/decisoes-metodologicas.md  decisões da coleta e seus efeitos (base da Metodologia)
@@ -100,6 +102,27 @@ data/gold/rotulos_<avaliador>.csv         planilha de rotulagem de cada avaliado
 Os arquivos grandes não vão para o Git: o cache (`data/cache/`, ~1,5 GB), os JSONs
 brutos (`data/raw/repos/`, ~1,5 GB) e `release_commits.csv.gz` (~190 MB). Eles são
 regenerados pelo pipeline. `workflow_runs.csv.gz` (~30 MB) é versionado compactado.
+
+## Análises
+
+As análises leem só `data/processed/repositories_metrics.csv` (sem API) e podem ser
+reexecutadas sempre que o dataset for recalculado.
+
+```bash
+pip install -e ".[analysis]"
+python -m analysis.descritivas
+python -m analysis.correlacoes
+```
+
+RQs 01 a 04: mediana e IQR das métricas, classificação DORA em C1 e proporção de
+censura. Saída em `reports/resultados/rq01_04/` (`descritivas.csv`,
+`classificacao_c1.csv`, `censura.csv` e as tabelas prontas em `rq01_04.md`).
+
+RQ 05: correlação de Spearman entre deployment frequency e CFR, separada para as
+variantes (a) e (b), com ρ, p-valor e n. Saída em `reports/resultados/rq05/`
+(`spearman.csv`, `dispersao.png` com eixo x em escala log e `rq05.md`). O teste é
+implementado com a biblioteca padrão (postos com média nos empates e teste t com
+n − 2 g.l., o mesmo método do `scipy.stats.spearmanr`); só os gráficos usam matplotlib.
 
 ## Como a seleção economiza cota
 

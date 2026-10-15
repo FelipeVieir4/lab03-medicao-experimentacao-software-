@@ -1,0 +1,3 @@
+item,label,total,censored,censored_pct,repos_with_items,repos_with_censored,median_repo_censored_pct
+recovery_episodes,Episódios de recuperação (RQ 04),36785,382,1.0384667663449776,367,168,0.0
+releases_cfr_b,Releases do CFR (b) (RQ 03),27571,1306,4.736861194733597,383,161,0.0
