@@ -68,3 +68,26 @@ def test_analyse_repository_guide_examples():
     assert abs(m["recovery_hours"] - 4 / 3) < 1e-9
     assert m["n_recovery_censored"] == 1 and m["recovery_censored_ratio"] == 0.5
     assert m["class_c1_overall"] in {"Elite", "High", "Medium", "Low"}
+
+
+def test_single_release_repository():
+    # caso de borda (seção 7): única release da história, sem release anterior nem runs
+    data = {
+        "window": {"start": "2026-01-01", "end": "2026-12-31"},
+        "repository": {"full_name": "o/unica", "created_at": "2020-01-01T00:00:00Z"},
+        "releases": [{"id": 1, "tag_name": "v1.0.0", "published_at": "2026-05-01T00:00:00Z",
+                      "prerelease": False, "html_url": ""}],
+        "compares": [], "workflow_runs": [], "tags": [], "workflows": [], "contributors": 1,
+    }
+    result = analyse_repository(data)
+    m = result["metrics"]
+    assert m["n_releases"] == 1
+    # sem release anterior: ignorada no lead time e na heurística corretiva, sem erro de compare
+    assert result["releases"][0]["compare_status"] == "first_release"
+    assert m["lead_time_release_days"] is None and m["lead_time_commit_days"] is None
+    assert m["n_releases_lead_time"] == 0 and m["n_compare_errors"] == 0
+    assert result["releases"][0]["is_corrective_v1"] is None
+    # sem release seguinte em até 7 dias: avaliada e não falhou
+    assert (m["n_releases_cfr_evaluated"], m["cfr_delivery"], m["rework_rate"]) == (1, 0.0, 0.0)
+    # sem runs: CFR (a) e recuperação indefinidos, logo sem classificação geral
+    assert m["cfr_ci"] is None and m["recovery_hours"] is None and m["class_c1_overall"] is None

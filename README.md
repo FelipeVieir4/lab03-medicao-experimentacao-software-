@@ -20,6 +20,7 @@ analysis/correlacoes.py    RQ 05: Spearman entre deployment frequency e CFR (a) 
 analysis/rotular.py        amostra-ouro: ferramenta interativa de rotulação
 analysis/concordancia.py   amostra-ouro: kappa de Fleiss e rótulo de consenso
 analysis/heuristica.py     amostra-ouro: precisão, recall e F1 da heurística de release corretiva
+analysis/rework.py         RQ 08 (bônus): rework rate e comparação com o CFR (b)
 docs/protocolo-rotulagem.md  como rotular, protocolo de desempate e refinamento da heurística
 tests/                     testes com fixtures, sem chamadas à API
 docs/dicionario-de-dados.md  documentação de cada coluna dos CSVs
@@ -116,6 +117,7 @@ reexecutadas sempre que o dataset for recalculado.
 pip install -e ".[analysis]"
 python -m analysis.descritivas
 python -m analysis.correlacoes
+python -m analysis.rework
 ```
 
 RQs 01 a 04: mediana e IQR das métricas, classificação DORA em C1 e proporção de
@@ -127,6 +129,10 @@ variantes (a) e (b), com ρ, p-valor e n. Saída em `reports/resultados/rq05/`
 (`spearman.csv`, `dispersao.png` com eixo x em escala log e `rq05.md`). O teste é
 implementado com a biblioteca padrão (postos com média nos empates e teste t com
 n − 2 g.l., o mesmo método do `scipy.stats.spearmanr`); só os gráficos usam matplotlib.
+
+RQ 08 (bônus): mediana e IQR do rework rate (releases corretivas / releases), comparação
+com o CFR (b) e Spearman entre os dois. Saída em `reports/resultados/rq08/` (`rework.csv`,
+`rework.png` e `rq08.md`).
 
 ### Validação manual (amostra-ouro)
 

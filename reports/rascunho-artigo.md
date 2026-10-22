@@ -118,6 +118,32 @@ Parte dessa diferença pode ser um artefato da própria definição operacional.
 
 > *Resultados das RQs 06 e 07: a completar (Resultados, parte 2).*
 
+### 5.8 RQ 08 (bônus): rework rate
+
+O *rework rate* é a proporção de releases corretivas sobre o total de releases estáveis da janela, usando a mesma heurística de release corretiva do CFR (b) (v1). Resultados gerados por `python -m analysis.rework`.
+
+**Tabela 4. Rework rate e CFR (b).**
+
+| Métrica | Definição | n | Mediana | Q1 | Q3 | IQR | Repositórios com valor 0 |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Rework rate | releases corretivas / releases | 383 | 0,444 | 0,215 | 0,725 | 0,509 | 4,4% |
+| CFR (b) | releases seguidas de corretiva em ≤ 7 dias / releases avaliadas | 381 | 0,167 | 0,024 | 0,364 | 0,340 | 22,8% |
+
+![Rework rate e CFR (b)](resultados/rq08/rework.png)
+
+*Figura 3. À esquerda, distribuições do rework rate e do CFR (b) (caixas: Q1, mediana e Q3; bigodes: percentis 5 e 95). À direita, dispersão entre as duas métricas; a linha tracejada é y = x.*
+
+No repositório típico, **44,4% das releases são corretivas**, quase três vezes a mediana do CFR (b) (16,7%). As duas métricas estão moderadamente correlacionadas (ρ = 0,484, p < 0,001, n = 381), mas o rework rate supera o CFR (b) em 85,8% dos repositórios e empata em 9,2%. Por isso, quase todos os pontos da Figura 3 ficam abaixo da diagonal.
+
+A diferença vem do que cada métrica conta:
+
+- **O que é contado:** o CFR (b) atribui a falha à release **quebrada**, aquela que foi seguida por uma correção. O rework rate conta as próprias releases **de correção**.
+- **Janela de 7 dias:** o CFR (b) só considera correções publicadas em até 7 dias. O rework rate conta qualquer release corretiva, inclusive as que corrigem defeitos antigos ou que vêm depois de um intervalo maior.
+- **Sequências de patches:** uma série como 2.3.1 → 2.3.2 → 2.3.3 conta três vezes no rework rate. No CFR (b), cada release só falha se a seguinte sair em até 7 dias.
+- **Censura:** o rework rate não precisa observar o que vem depois da release, então não tem censura no fim da janela.
+
+O rework rate mede, portanto, **quanto do esforço de entrega é gasto com retrabalho**, enquanto o CFR (b) mede **quantas entregas precisaram ser corrigidas logo em seguida**. O valor alto do rework rate também indica que a heurística v1 é ampla, já que quase toda release de patch tem algum commit com `fix`. Esses números dependem da validação da heurística contra a amostra-ouro e serão atualizados se ela for refinada.
+
 ## 6. Limitações e trabalho futuro
 
 Ainda falta implementar a coleta de commits entre releases, a consolidação do dataset final, a validação manual, as análises estatísticas e a análise de sensibilidade. Esses itens serão realizados nas próximas Issues e sprints.
