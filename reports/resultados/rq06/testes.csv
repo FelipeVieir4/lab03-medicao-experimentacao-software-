@@ -1,0 +1,17 @@
+factor,factor_label,metric,metric_label,groups,n,test,statistic,p_value,effect,effect_value,magnitude,comparison,p_holm,significant,delta_q4_q1
+linguagem,Linguagem principal,deployment_frequency,Deployment frequency,6,383,Kruskal-Wallis,22.116076636684948,0.0004976513523963572,epsilon2,0.057895488577709285,pequeno,,0.0056931779128546215,True,
+linguagem,Linguagem principal,lead_time_release_days,Lead time (a),6,383,Kruskal-Wallis,36.57477623483351,7.287738586846031e-07,epsilon2,0.09574548752574216,médio,,9.47406016289984e-06,True,
+linguagem,Linguagem principal,cfr_ci,CFR (a),6,383,Kruskal-Wallis,12.573810815000867,0.027717364475303527,epsilon2,0.03291573511780332,pequeno,,0.2771736447530353,False,
+linguagem,Linguagem principal,recovery_hours,Tempo de recuperação,6,364,Kruskal-Wallis,7.1912582804327485,0.20680035747630823,epsilon2,0.01981062887171556,pequeno,,1.0,False,
+estrelas,Estrelas (quartis),deployment_frequency,Deployment frequency,4,383,Kruskal-Wallis,6.697280044228976,0.08219865896372897,epsilon2,0.0175321467126413,pequeno,,0.657105453101759,False,0.20648871527777768
+estrelas,Estrelas (quartis),lead_time_release_days,Lead time (a),4,383,Kruskal-Wallis,1.8618557398310713,0.6015678113501024,epsilon2,0.004873967905316941,desprezível,,1.0,False,-0.10438368055555558
+estrelas,Estrelas (quartis),cfr_ci,CFR (a),4,383,Kruskal-Wallis,1.5658005543435407,0.6671689308447122,epsilon2,0.004098954330742253,desprezível,,1.0,False,0.06575520833333326
+estrelas,Estrelas (quartis),recovery_hours,Tempo de recuperação,4,364,Kruskal-Wallis,6.698947994956825,0.08213818163771988,epsilon2,0.018454402189963706,pequeno,,0.657105453101759,False,-0.01642512077294689
+contribuidores,Contribuidores (quartis),deployment_frequency,Deployment frequency,4,383,Kruskal-Wallis,2.6674984526556544,0.44577887795252136,epsilon2,0.0069829802425540695,desprezível,,1.0,False,0.13377192982456143
+contribuidores,Contribuidores (quartis),lead_time_release_days,Lead time (a),4,383,Kruskal-Wallis,57.767079899640976,1.7625852456833811e-12,epsilon2,0.15122272225036903,médio,,2.6438778685250718e-11,True,0.5866228070175439
+contribuidores,Contribuidores (quartis),cfr_ci,CFR (a),4,383,Kruskal-Wallis,3.0850779333971245,0.37869293459640496,epsilon2,0.00807612024449509,desprezível,,1.0,False,0.10811403508771922
+contribuidores,Contribuidores (quartis),recovery_hours,Tempo de recuperação,4,364,Kruskal-Wallis,3.33157424638307,0.3432722191083921,epsilon2,0.009177890485903775,desprezível,,1.0,False,0.10141843971631204
+idade,Idade (quartis),deployment_frequency,Deployment frequency,4,383,Kruskal-Wallis,35.22873157524521,1.0899534545718802e-07,epsilon2,0.09222181040640108,médio,,1.5259348364006322e-06,True,-0.44108072916666663
+idade,Idade (quartis),lead_time_release_days,Lead time (a),4,383,Kruskal-Wallis,121.04404837694983,4.5980650254571694e-26,epsilon2,0.3168692365888739,grande,,7.356904040731471e-25,True,0.8003472222222223
+idade,Idade (quartis),cfr_ci,CFR (a),4,383,Kruskal-Wallis,7.917566786001467,0.04774642940730869,epsilon2,0.02072661462304049,pequeno,,0.42971786466577816,False,-0.1937934027777778
+idade,Idade (quartis),recovery_hours,Tempo de recuperação,4,364,Kruskal-Wallis,17.84059327382397,0.00047443149273788515,epsilon2,0.0491476398727933,pequeno,,0.0056931779128546215,True,0.32101449275362315
