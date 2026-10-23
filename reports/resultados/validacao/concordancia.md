@@ -12,5 +12,5 @@ Gerado por `python -m analysis.concordancia`. Avaliadores: FelipeVieir4, yanrese
 
 ## Consenso
 
-- Casos sem maioria (enviados à reunião): 86, dos quais 86 ainda sem decisão.
-- Origem do rótulo de consenso da release corretiva: pendente = 78, unanime = 222.
+- Casos sem maioria (enviados à reunião): 86, dos quais 0 ainda sem decisão.
+- Origem do rótulo de consenso da release corretiva: reuniao = 78, unanime = 222.

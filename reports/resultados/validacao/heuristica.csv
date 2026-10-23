@@ -1,0 +1,5 @@
+version,description,n,positives,tp,fp,fn,tn,precision,recall,f1,meets_target
+v1,só o PATCH muda E há commit fix/hotfix/revert (fora do SemVer: só o commit),297,127,78,54,49,116,0.5909090909090909,0.6141732283464567,0.6023166023166022,False
+v2,há commit fix/hotfix/revert,297,127,114,151,13,19,0.43018867924528303,0.8976377952755905,0.5816326530612245,False
+v3,só o PATCH muda,297,127,89,58,38,112,0.6054421768707483,0.7007874015748031,0.6496350364963503,False
+v4,só o PATCH muda OU há commit fix/hotfix/revert,297,127,125,158,2,12,0.4416961130742049,0.984251968503937,0.6097560975609756,False

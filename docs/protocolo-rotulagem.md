@@ -72,6 +72,19 @@ python -m analysis.concordancia
 
 O kappa é sempre calculado sobre os rótulos **independentes**, antes do consenso.
 
+### Desempate aplicado (reunião de 23/10/2026)
+
+Houve 86 divergências: 78 de release corretiva, 5 de tipo do projeto e 3 de entrega real.
+Na reunião, os dois avaliadores concluíram que um deles (yanresende) tinha aplicado o
+critério de forma mais consistente. Por isso, **o rótulo desse avaliador foi adotado em
+todas as 86 divergências**, sem revisão caso a caso. Isso fica registrado na coluna
+`justificativa` de `data/gold/divergencias.csv`.
+
+Consequência para a validade: nos 78 casos divergentes de release corretiva (26% das 300
+releases), o consenso coincide com um único avaliador. A avaliação da heurística (#10) é,
+portanto, uma comparação com o consenso nos 222 casos unânimes e com o julgamento de um
+só avaliador nos demais. Isso é registrado como ameaça à validade de construto.
+
 ## 5. Avaliação da heurística (#10)
 
 ```bash
