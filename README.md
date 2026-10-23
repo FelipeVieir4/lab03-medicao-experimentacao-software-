@@ -17,6 +17,8 @@ pipeline/dataset.py        consolida os JSONs em CSVs e calcula as métricas
 pipeline/metrics.py        funções puras das métricas DORA
 analysis/descritivas.py    estatística descritiva das RQs 01-04 e classificação DORA (C1)
 analysis/correlacoes.py    RQ 05: Spearman entre deployment frequency e CFR (a) e (b)
+analysis/fatores.py        RQ 06: Kruskal-Wallis/Mann-Whitney por fator, Holm, ε² e Cliff's delta
+analysis/sensibilidade.py  RQ 07: classificação em C1, C2 e C3, % de mudança e kappa ponderado
 analysis/rotular.py        amostra-ouro: ferramenta interativa de rotulação
 analysis/concordancia.py   amostra-ouro: kappa de Fleiss e rótulo de consenso
 analysis/heuristica.py     amostra-ouro: precisão, recall e F1 da heurística de release corretiva
@@ -117,6 +119,8 @@ reexecutadas sempre que o dataset for recalculado.
 pip install -e ".[analysis]"
 python -m analysis.descritivas
 python -m analysis.correlacoes
+python -m analysis.fatores
+python -m analysis.sensibilidade
 python -m analysis.rework
 ```
 
@@ -129,6 +133,18 @@ variantes (a) e (b), com ρ, p-valor e n. Saída em `reports/resultados/rq05/`
 (`spearman.csv`, `dispersao.png` com eixo x em escala log e `rq05.md`). O teste é
 implementado com a biblioteca padrão (postos com média nos empates e teste t com
 n − 2 g.l., o mesmo método do `scipy.stats.spearmanr`); só os gráficos usam matplotlib.
+
+RQ 06: para cada fator (linguagem principal, quartis de estrelas, de contribuidores e de
+idade e, quando existir `data/gold/consenso.csv`, tipo do projeto) × métrica de C1, teste de
+Kruskal-Wallis (ou Mann-Whitney com dois grupos), p-valores corrigidos por Holm, ε² e Cliff's
+delta; nos testes significativos, comparações par a par. Saída em `reports/resultados/rq06/`
+(`testes.csv`, `posthoc.csv`, `medianas.csv`, `efeitos.png` e `rq06.md`). Implementado com a
+biblioteca padrão e conferido com `scipy.stats` e `statsmodels`.
+
+RQ 07: classificação DORA de cada repositório nas combinações C1, C2 e C3, % de repositórios
+que mudam de categoria e kappa de Cohen com ponderação linear para cada par, na classificação
+geral e em cada métrica. Saída em `reports/resultados/rq07/` (`classes.csv`, `pares.csv`,
+`distribuicao.csv`, `transicoes.csv`, `distribuicao.png` e `rq07.md`).
 
 RQ 08 (bônus): mediana e IQR do rework rate (releases corretivas / releases), comparação
 com o CFR (b) e Spearman entre os dois. Saída em `reports/resultados/rq08/` (`rework.csv`,
@@ -163,8 +179,9 @@ aprovado: workflows (1 chamada) → releases na janela → contagem de runs (1
 chamada) → runs completos mês a mês → para os elegíveis, `compare` entre
 releases, tags (GraphQL) e contribuidores. A busca de candidatos é fatiada por
 faixas de estrelas porque a API devolve no máximo 1.000 resultados por consulta,
-e os runs são buscados mês a mês, com subdivisão automática de qualquer
-intervalo que passe de 1.000 resultados.
+e os runs são buscados mês a mês. Meses que passam de 1.000 resultados só são
+subdivididos com `split_capped_runs = true`; no padrão (`false`), entram os 1.000 runs
+mais recentes do mês e o mês fica registrado em `runs_capped_days`.
 
 ## Testes
 
