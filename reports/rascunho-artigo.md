@@ -87,7 +87,7 @@ Para a análise de sensibilidade (RQ 07), as métricas são recalculadas em trê
 | C2 | release + pré-release | (b) | (b) | `deployment_frequency_with_pre` |
 | C3 | tag | (b) | (a) | `deployment_frequency_tags` |
 
-Na C2, o compare de cada release é feito contra a release anterior de qualquer tipo. Das 383 amostras, 162 publicaram ao menos uma pré-release na janela; nas demais, C1 e C2 diferem só nas variantes de lead time e CFR. Na C3, a data de cada tag é a data do commit apontado (`authoredDate` via GraphQL), como pede o guia. O lead time por tag não foi coletado, porque exigiria um compare por par de tags. Por isso a C3 usa o lead time (b) das releases e muda só a unidade da frequência de deploy. O tempo de recuperação é o mesmo nas três combinações.
+Na C2, o compare de cada release é feito contra a release anterior de qualquer tipo. Dos 383 repositórios, 162 publicaram ao menos uma pré-release na janela; nas demais, C1 e C2 diferem só nas variantes de lead time e CFR. Na C3, a data de cada tag é a data do commit apontado (`authoredDate` via GraphQL), como pede o guia. O lead time por tag não foi coletado, porque exigiria um compare por par de tags. Por isso a C3 usa o lead time (b) das releases e muda só a unidade da frequência de deploy. O tempo de recuperação é o mesmo nas três combinações.
 
 Em cada combinação, cada métrica é classificada em Elite, High, Medium ou Low pelos cortes fixos da disciplina. A categoria geral é a mediana das quatro notas (Elite = 4, High = 3, Medium = 2, Low = 1), arredondada para baixo. Repositórios sem alguma das quatro métricas ficam sem categoria geral.
 
@@ -129,21 +129,66 @@ A rotulação foi independente: cada avaliador trabalhou sozinho, sem ver a plan
 
 ### 4.3 Concordância e consenso
 
-A concordância é medida pelo **kappa de Fleiss** em cada dimensão, sobre os rótulos independentes (antes do consenso), e interpretada pela escala de Landis e Koch (1977). Os casos divergentes são discutidos em reunião, relendo as *release notes* e os commits, e a decisão e o motivo ficam registrados em `data/gold/divergencias.csv`. Se ainda assim não houver acordo, vale o rótulo mais conservador: `nao` para release corretiva, `incerto` para entrega real e `outro` para tipo do projeto. O protocolo completo está em `docs/protocolo-rotulagem.md`.
+A concordância é medida pelo **kappa de Fleiss** em cada dimensão, sobre os rótulos independentes (antes do consenso), e interpretada pela escala de Landis e Koch (1977).
 
-> *Kappa de cada dimensão e número de casos levados à reunião: a preencher após a rotulação (#8, #9).*
+**Tabela 5. Concordância entre os avaliadores, sobre os rótulos independentes.**
+
+| Dimensão | Itens | Concordância | κ de Fleiss | Landis e Koch |
+|---|---:|---:|---:|---|
+| Tipo do projeto | 60 | 91,7% | 0,875 | quase perfeita |
+| Releases são entregas reais | 60 | 95,0% | −0,026 | pobre |
+| Release corretiva | 300 | 74,0% | 0,477 | moderada |
+
+O **tipo do projeto** tem concordância quase perfeita: o README costuma deixar claro se o projeto é uma biblioteca, uma aplicação ou uma ferramenta de linha de comando.
+
+A **entrega real** mostra o paradoxo do kappa (Feinstein e Cicchetti, 1990), em que a concordância é alta e o kappa é baixo.
+- Quase todos os rótulos são "sim" (117 de 120), então dois avaliadores que respondessem "sim" quase sempre já concordariam em 95,1% dos casos por acaso.
+- O kappa mede a concordância acima do acaso, e por isso fica perto de zero.
+- As três divergências foram de um avaliador marcando "não" e o outro "sim". Os dois nunca concordaram num "não".
+
+O resultado não indica um critério ambíguo. Indica uma dimensão que quase não varia na amostra: para os dois avaliadores, as releases de praticamente todos os repositórios levam software utilizável ao usuário. Isso dá algum apoio ao uso de releases como proxy de entrega nesta amostra.
+
+A **release corretiva** tem concordância só moderada.
+- Os avaliadores divergiram em uma de cada quatro releases: um marcou 151 das 300 como corretivas, e o outro, 127.
+- Decidir se o objetivo *principal* de uma release é corrigir um defeito exige interpretar notas de versão que costumam misturar correções, melhorias e manutenção.
+- Se duas pessoas discordam nesse ponto, não se pode esperar que uma regra automática acerte muito mais. Esse é o teto prático da heurística avaliada na seção 4.4.
+
+Houve **86 divergências**: 78 de release corretiva, 5 de tipo do projeto e 3 de entrega real.
+- **O que o protocolo previa:** discutir cada caso relendo as *release notes* e os commits.
+- **O que foi feito:** na reunião de desempate, os avaliadores concluíram que um deles tinha aplicado o critério de forma mais consistente, e o rótulo desse avaliador foi adotado em todas as divergências, sem revisão caso a caso. A decisão está registrada em `data/gold/divergencias.csv` e em `docs/protocolo-rotulagem.md`.
+- **Consequência:** nos 78 casos divergentes de release corretiva (26% das 300 releases), o consenso equivale ao julgamento de um único avaliador. Isso é tratado como ameaça à validade de construto.
 
 ### 4.4 Avaliação da heurística
 
-A heurística de release corretiva é comparada com o rótulo de consenso por precisão, recall e F1, com `sim` como classe positiva. A meta é F1 ≥ 0,70. Abaixo disso, a heurística é refinada a partir dos erros e reavaliada, e cada versão testada fica registrada com o seu F1. Já existem quatro versões prontas para teste: a v1 (PATCH e commit de correção), a v2 (só o commit), a v3 (só o PATCH) e a v4 (PATCH ou commit). O tipo do projeto definido no consenso é usado como fator na RQ 06.
+A heurística de release corretiva é comparada com o rótulo de consenso por precisão, recall e F1, com `sim` como classe positiva.
+- **Releases avaliadas:** 297. As outras 3 são a primeira release do repositório e não têm com o que ser comparadas.
+- **Positivos:** o consenso marca 127 delas (42,8%) como corretivas.
+- **Meta:** F1 ≥ 0,70. Abaixo disso, a heurística é refinada a partir dos erros e reavaliada, e cada versão testada fica registrada com o seu F1.
 
-> *Precisão, recall e F1 de cada versão: a preencher após o consenso (#10).*
+**Tabela 6. Versões da heurística de release corretiva frente ao consenso (n = 297).**
+
+| Versão | Regra | Precisão | Recall | F1 |
+|---|---|---:|---:|---:|
+| v1 (usada nos resultados) | só o PATCH muda **e** há commit de correção | 0,591 | 0,614 | 0,602 |
+| v2 | há commit de correção | 0,430 | 0,898 | 0,582 |
+| v3 | só o PATCH muda | 0,605 | 0,701 | 0,650 |
+| v4 | só o PATCH muda **ou** há commit de correção | 0,442 | 0,984 | 0,610 |
+
+*Commit de correção: mensagem com `fix`, `fixes`, `fixed`, `bugfix`, `hotfix` ou `revert`. Para tags fora do SemVer, a v1 usa só o commit.*
+
+**Nenhuma das quatro versões atinge a meta.** Os erros mostram por quê:
+- **O commit de correção quase não discrimina.** 265 das 297 releases (89,2%) têm ao menos um commit com essas palavras, porque quase toda release reúne alguma correção, ainda que pequena. Por isso as versões que dependem só dele (v2) ou que o aceitam como alternativa (v4) têm recall alto e precisão baixa.
+- **O PATCH é o sinal mais informativo, mas não basta.** A v3 tem o melhor F1 (0,650). A v1, que exige as duas condições, perde recall sem ganhar precisão.
+
+> *Versões refinadas (v5 em diante) e seus F1: a preencher após o refinamento.*
+
+O tipo do projeto definido no consenso é usado como fator na RQ 06.
 
 ## 5. Resultados
 
 Esta seção apresenta os resultados das RQs 01 a 05 sobre a amostra final de **383 repositórios**, na janela de 02/10/2025 a 01/10/2026. Seguindo o enunciado, cada métrica é resumida pela mediana e pelo intervalo interquartil (IQR, de Q1 a Q3), pois as distribuições são muito assimétricas. A classificação DORA usa os cortes fixos da disciplina na combinação de referência **C1**: release estável, lead time (a), CFR (a) e tempo de recuperação. Todas as tabelas e figuras são regeneradas a partir de `data/processed/repositories_metrics.csv` por `python -m analysis.descritivas` e `python -m analysis.correlacoes`.
 
-**Tabela 5. Mediana e IQR das métricas DORA (RQs 01 a 04).**
+**Tabela 7. Mediana e IQR das métricas DORA (RQs 01 a 04).**
 
 | RQ | Métrica | Unidade | n | Mediana | Q1 | Q3 | IQR |
 |---|---|---|---:|---:|---:|---:|---:|
@@ -154,7 +199,7 @@ Esta seção apresenta os resultados das RQs 01 a 05 sobre a amostra final de **
 | RQ 03 | CFR (b): falha de entrega | proporção | 381 | 0,167 | 0,024 | 0,364 | 0,340 |
 | RQ 04 | Tempo de recuperação | horas | 364 | 2,63 | 1,11 | 6,68 | 5,56 |
 
-**Tabela 6. Classificação DORA na combinação C1 (% sobre os repositórios classificados).**
+**Tabela 8. Classificação DORA na combinação C1 (% sobre os repositórios classificados).**
 
 | Métrica | n | Elite | High | Medium | Low |
 |---|---:|---:|---:|---:|---:|
@@ -192,7 +237,7 @@ As duas variantes de CFR medem coisas diferentes e produzem valores bem diferent
 - **CFR (a), falha de pipeline:** mediana de **4,9%** (IQR de 2,3% a 11,3%). Com esse valor, 82,5% dos repositórios caem na faixa Elite (≤ 15%), o que torna o CFR (a) a métrica menos discriminante de C1.
 - **CFR (b), falha de entrega:** mediana de **16,7%** (IQR de 2,4% a 36,4%), mais de três vezes a do CFR (a) e com dispersão quase quatro vezes maior. Com essa variante, só 48,0% dos repositórios seriam Elite. Além disso, 87 repositórios (22,8%) não tiveram nenhuma release seguida de correção em até 7 dias (CFR (b) = 0).
 
-A correlação de Spearman entre as variantes é fraca: ρ = 0,138 (p = 0,007, n = 381). Um repositório com pipeline instável não tende a ser o mesmo que publica releases corretivas, o que confirma a hipótese de que as variantes não são equivalentes. O CFR (a) registra qualquer falha de CI no default branch, inclusive testes instáveis (*flaky*) e falhas de lint corrigidas em minutos, que nunca chegam ao usuário. Já o CFR (b) se aproxima mais da definição DORA, mas depende da heurística de release corretiva (v1: só o PATCH muda e há commit com `fix`, `hotfix` ou `revert`), que **ainda está sendo validada** contra a amostra-ouro. Os valores do CFR (b) podem mudar após essa validação.
+A correlação de Spearman entre as variantes é fraca: ρ = 0,138 (p = 0,007, n = 381). Um repositório com pipeline instável não tende a ser o mesmo que publica releases corretivas, o que confirma a hipótese de que as variantes não são equivalentes. O CFR (a) registra qualquer falha de CI no default branch, inclusive testes instáveis (*flaky*) e falhas de lint corrigidas em minutos, que nunca chegam ao usuário. Já o CFR (b) se aproxima mais da definição DORA, mas depende da heurística de release corretiva (v1: só o PATCH muda e há commit com `fix`, `hotfix` ou `revert`), que **não atingiu a meta de F1 ≥ 0,70** na validação contra a amostra-ouro (F1 = 0,602; seção 4.4). Os valores do CFR (b) vão mudar quando a heurística for refinada.
 
 Por censura, **1.306 das 27.571 releases (4,74%)**, de 161 repositórios, ficaram fora do denominador do CFR (b) por terem sido publicadas nos últimos 7 dias da janela. Dois repositórios ficaram sem CFR (b) porque todas as suas releases caíram nesse período: `expo/expo`, com 267 releases entre 29/09 e 01/10/2026, e `Alishahryar1/free-claude-code`. No caso do `expo/expo`, a verificação mostrou que não se trata de erro de coleta: o projeto, um monorepo, só passou a publicar releases no GitHub em 29/09/2026, e publica uma release por pacote. Isso também infla a sua deployment frequency (5,1 por semana) e é um exemplo extremo de release que não equivale a deploy.
 
@@ -206,7 +251,7 @@ Dos 36.785 episódios de falha, **382 (1,04%) foram censurados**, isto é, não 
 
 ### 5.5 RQ 05: velocidade × estabilidade
 
-**Tabela 7. Correlação de Spearman entre deployment frequency e CFR.**
+**Tabela 9. Correlação de Spearman entre deployment frequency e CFR.**
 
 | Variante do CFR | n | ρ | p-valor | Interpretação (α = 0,05) |
 |---|---:|---:|---:|---|
@@ -223,16 +268,22 @@ Parte dessa diferença pode ser um artefato da própria definição operacional.
 
 ### 5.6 RQ 06: características associadas ao desempenho
 
-Foram usados quatro fatores: linguagem principal, estrelas, contribuidores e idade do repositório. Os três últimos foram divididos pelos quartis da amostra (Q1 = 25% menores). Na linguagem, as cinco linguagens com pelo menos 30 repositórios (TypeScript, Python, Go, Rust e JavaScript) formam grupos próprios, e as demais foram reunidas em "Outras" (71 repositórios), para não haver grupos com dois ou três repositórios. O quinto fator, tipo do projeto, depende do consenso da amostra-ouro e cobre só 60 repositórios; ele será incluído depois da validação manual. Com 4 fatores e as 4 métricas de C1, são **16 testes de Kruskal-Wallis**, com p-valores corrigidos por Holm. Resultados gerados por `python -m analysis.fatores`.
+Foram usados cinco fatores: linguagem principal, estrelas, contribuidores, idade do repositório e tipo do projeto.
+- **Estrelas, contribuidores e idade** foram divididos pelos quartis da amostra (Q1 = 25% menores).
+- **Linguagem:** as cinco linguagens com pelo menos 30 repositórios (TypeScript, Python, Go, Rust e JavaScript) formam grupos próprios, e as demais foram reunidas em "Outras" (71 repositórios), para não haver grupos com dois ou três repositórios.
+- **Tipo do projeto:** vem do rótulo de consenso da amostra-ouro (seção 4) e, por isso, cobre só os 60 repositórios sorteados: 25 aplicações, 18 bibliotecas, 14 ferramentas CLI e 3 "outro".
 
-**Tabela 8. Tamanho de efeito ε² e p-valor corrigido por Holm (entre parênteses) de cada fator × métrica.**
+Com 5 fatores e as 4 métricas de C1, são **20 testes de Kruskal-Wallis**, com p-valores corrigidos por Holm numa única família. Resultados gerados por `python -m analysis.fatores`.
+
+**Tabela 10. Tamanho de efeito ε² e p-valor corrigido por Holm (entre parênteses) de cada fator × métrica.**
 
 | Fator | Deployment frequency | Lead time (a) | CFR (a) | Tempo de recuperação |
 |---|---:|---:|---:|---:|
-| Linguagem principal | **0,058** (0,006) | **0,096** (< 0,001) | 0,033 (0,277) | 0,020 (1,000) |
-| Estrelas (quartis) | 0,018 (0,657) | 0,005 (1,000) | 0,004 (1,000) | 0,018 (0,657) |
+| Linguagem principal | **0,058** (0,008) | **0,096** (< 0,001) | 0,033 (0,388) | 0,020 (1,000) |
+| Estrelas (quartis) | 0,018 (0,986) | 0,005 (1,000) | 0,004 (1,000) | 0,018 (0,986) |
 | Contribuidores (quartis) | 0,007 (1,000) | **0,151** (< 0,001) | 0,008 (1,000) | 0,009 (1,000) |
-| Idade (quartis) | **0,092** (< 0,001) | **0,317** (< 0,001) | 0,021 (0,430) | **0,049** (0,006) |
+| Idade (quartis) | **0,092** (< 0,001) | **0,317** (< 0,001) | 0,021 (0,621) | **0,049** (0,008) |
+| Tipo do projeto (n = 60) | 0,012 (1,000) | 0,079 (1,000) | 0,044 (1,000) | 0,085 (1,000) |
 
 *Em negrito, os testes significativos (α = 0,05 após Holm). Escala usual de ε²: < 0,01 desprezível; < 0,08 pequeno; < 0,26 médio; ≥ 0,26 grande.*
 
@@ -240,7 +291,7 @@ Foram usados quatro fatores: linguagem principal, estrelas, contribuidores e ida
 
 *Figura 3. Tamanho de efeito ε² de cada fator × métrica; o asterisco marca os testes significativos após a correção de Holm.*
 
-Seis dos 16 testes são significativos. O fator mais forte é a **idade**. Os repositórios mais novos (Q1, menos de 2,6 anos) têm mediana de lead time (a) de **2,9 dias**, contra **42,3 dias** nos mais antigos (Q4, mais de 10,6 anos). O efeito é grande (ε² = 0,317; Cliff's δ entre Q4 e Q1 = 0,800). Os mais novos também publicam mais (0,88 contra 0,36 release por semana, δ = −0,441) e recuperam o pipeline mais rápido (1,5 contra 3,3 horas, δ = 0,321).
+Seis dos 20 testes são significativos. O fator mais forte é a **idade**. Os repositórios mais novos (Q1, menos de 2,6 anos) têm mediana de lead time (a) de **2,9 dias**, contra **42,3 dias** nos mais antigos (Q4, mais de 10,6 anos). O efeito é grande (ε² = 0,317; Cliff's δ entre Q4 e Q1 = 0,800). Os mais novos também publicam mais (0,88 contra 0,36 release por semana, δ = −0,441) e recuperam o pipeline mais rápido (1,5 contra 3,3 horas, δ = 0,321).
 
 O número de **contribuidores** está associado só ao lead time. O quartil com mais contribuidores (Q4, mais de 948) tem mediana de 32,1 dias, contra 5,5 dias no quartil com menos (Q1, menos de 208), com δ = 0,587 (grande). Nas outras três métricas, os quartis praticamente não diferem.
 
@@ -248,11 +299,15 @@ Na **linguagem**, as diferenças aparecem na frequência de deploy e no lead tim
 
 A **popularidade** (estrelas) não tem associação significativa com nenhuma métrica, e seus efeitos são todos desprezíveis ou pequenos (ε² ≤ 0,018). O **CFR (a)** também não difere entre os grupos de nenhum fator. Dois testes de CFR (a) seriam significativos sem a correção (linguagem, p = 0,028, e idade, p = 0,048), mas deixam de ser com Holm. Esse é exatamente o tipo de falso positivo que a correção para comparações múltiplas evita.
 
+O **tipo do projeto** também não tem associação significativa com nenhuma métrica.
+- **O que as medianas sugerem:** bibliotecas teriam lead time maior (15,4 dias, contra 9,2 nas aplicações e 12,1 nas ferramentas CLI) e recuperação mais lenta (2,9 horas, contra 1,5 e 1,1). Os efeitos vão de pequeno a médio (ε² de 0,012 a 0,085).
+- **Por que isso não basta:** com 60 repositórios, e só 3 no grupo "outro", o teste tem pouco poder para detectar diferenças desse tamanho, e nenhum p corrigido fica abaixo de 1,000. A ausência de significância aqui não é evidência de que o tipo do projeto não importa. Ela mostra que a amostra-ouro é pequena demais para responder a essa pergunta.
+
 ### 5.7 RQ 07: sensibilidade à definição operacional
 
 As três combinações da Tabela 3 foram classificadas pelos mesmos cortes da disciplina. Os resultados foram gerados por `python -m analysis.sensibilidade`.
 
-**Tabela 9. Classificação DORA geral em cada combinação.**
+**Tabela 11. Classificação DORA geral em cada combinação.**
 
 | Combinação | n | Elite | High | Medium | Low |
 |---|---:|---:|---:|---:|---:|
@@ -260,7 +315,7 @@ As três combinações da Tabela 3 foram classificadas pelos mesmos cortes da di
 | C2: release + pré-release, lead time (b), CFR (b) | 362 | 7 (1,9%) | 148 (40,9%) | 191 (52,8%) | 16 (4,4%) |
 | C3: tag, lead time (b), CFR (a) | 364 | 23 (6,3%) | 187 (51,4%) | 143 (39,3%) | 11 (3,0%) |
 
-**Tabela 10. Repositórios que mudam de categoria e kappa de Cohen ponderado (linear) entre as combinações.**
+**Tabela 12. Repositórios que mudam de categoria e kappa de Cohen ponderado (linear) entre as combinações.**
 
 | Métrica | C1 × C2: mudaram | κ | C1 × C3: mudaram | κ | C2 × C3: mudaram | κ |
 |---|---:|---:|---:|---:|---:|---:|
@@ -288,7 +343,7 @@ Uma observação de método: o kappa ponderado depende da ordem das categorias. 
 
 O *rework rate* é a proporção de releases corretivas sobre o total de releases estáveis da janela, usando a mesma heurística de release corretiva do CFR (b) (v1). Resultados gerados por `python -m analysis.rework`.
 
-**Tabela 11. Rework rate e CFR (b).**
+**Tabela 13. Rework rate e CFR (b).**
 
 | Métrica | Definição | n | Mediana | Q1 | Q3 | IQR | Repositórios com valor 0 |
 |---|---|---:|---:|---:|---:|---:|---:|
@@ -314,7 +369,7 @@ O rework rate mede, portanto, **quanto do esforço de entrega é gasto com retra
 
 ### 6.1 Hipóteses e resultados
 
-**Tabela 12. Hipóteses informais da Introdução e o que os dados mostraram.**
+**Tabela 14. Hipóteses informais da Introdução e o que os dados mostraram.**
 
 | RQ | Hipótese | Resultado |
 |---|---|---|
@@ -323,7 +378,7 @@ O rework rate mede, portanto, **quanto do esforço de entrega é gasto com retra
 | 03 | CFR (a) e CFR (b) não são equivalentes | **Confirmada.** Medianas de 4,9% e 16,7%, ρ = 0,138 entre elas e κ = 0,034 nas categorias |
 | 04 | Parte dos episódios fica censurada | **Confirmada, em escala pequena** (1,04% dos episódios) |
 | 05 | Relação fraca ou inexistente entre frequência e falha | **Depende do proxy.** Fraca com o CFR (a) (ρ = 0,161), moderada com o CFR (b) (ρ = 0,507) |
-| 06 | Popularidade, idade, contribuidores e linguagem associados ao desempenho | **Parcial.** Idade, contribuidores e linguagem, sim; popularidade, não |
+| 06 | Popularidade, idade, contribuidores e linguagem associados ao desempenho | **Parcial.** Idade, contribuidores e linguagem, sim; popularidade, não. O tipo do projeto não teve diferença significativa, mas só cobre 60 repositórios |
 | 07 | As categorias podem mudar com a definição | **Confirmada.** 20,9% a 27,3% dos repositórios mudam de categoria geral |
 
 ### 6.2 O que surpreendeu
@@ -340,14 +395,13 @@ A RQ 07 permite separar o que é robusto do que depende da definição:
 
 - **Robustas:** a frequência de deploy e o tempo de recuperação. A frequência muda pouco entre as definições (κ de 0,64 a 0,84), e as conclusões da RQ 01 (cauda longa, mediana de cerca de uma release a cada duas semanas) se mantêm. O tempo de recuperação não depende de nenhuma das escolhas testadas.
 - **Moderadamente robustas:** o lead time. As categorias mudam em cerca de 40% dos repositórios entre as variantes (a) e (b), mas quase sempre para uma faixa vizinha. A associação com a idade aparece nas duas variantes (ε² = 0,317 na (a) e 0,326 na (b)), assim como a associação com os contribuidores (0,151 e 0,199).
-- **Não robustas:** tudo o que envolve CFR. A categoria de CFR muda em mais da metade dos repositórios, a RQ 05 muda de "relação fraca" para "relação moderada" conforme o proxy, e a RQ 06 também muda. Com o CFR (a), a idade não tem efeito significativo. Com o CFR (b), numa análise exploratória fora da família corrigida, o efeito da idade passa a ser grande (ε² = 0,183): os repositórios novos teriam mais releases corretivas. Esse resultado é coerente com a RQ 05, já que os repositórios novos também publicam mais e, por construção, têm mais chances de ter duas releases em menos de 7 dias.
+- **Não robustas:** tudo o que envolve CFR. A categoria de CFR muda em mais da metade dos repositórios, a RQ 05 muda de "relação fraca" para "relação moderada" conforme o proxy, e a RQ 06 também muda. Com o CFR (a), a idade não tem efeito significativo. Com o CFR (b), numa análise exploratória fora da família corrigida, o efeito da idade passa a ser médio (ε² = 0,183): os repositórios novos teriam mais releases corretivas. Esse resultado é coerente com a RQ 05, já que os repositórios novos também publicam mais e, por construção, têm mais chances de ter duas releases em menos de 7 dias.
 
 Em resumo, a **classificação geral** de um repositório é razoavelmente estável (κ ≥ 0,56 e mudanças quase sempre de um nível), mas as conclusões sobre **estabilidade** dependem da escolha do proxy de falha. Afirmações como "projetos que entregam mais rápido falham mais" ou "não falham mais" não podem ser feitas com esses dados sem dizer qual CFR foi usado. Isso reforça a principal limitação do estudo: o GitHub não registra falhas em produção, e cada proxy captura uma parte diferente do conceito.
 
 ## 7. Limitações e próximos passos
 
-- A heurística de release corretiva, que sustenta o CFR (b), o rework rate e a C2, ainda depende da validação contra a amostra-ouro. Se ela for refinada, as RQs 03 (b), 05, 07 e 08 serão recalculadas.
-- O tipo do projeto será incluído na RQ 06 depois do consenso da amostra-ouro, com a ressalva de que cobre só 60 repositórios.
+- A heurística de release corretiva, que sustenta o CFR (b), o rework rate e a C2, não atingiu F1 ≥ 0,70 em nenhuma das quatro versões testadas (seção 4.4). Ela está sendo refinada, e as RQs 03 (b), 05, 07 e 08 serão recalculadas com a versão final.
 - As ameaças à validade (construto, interna, externa e de conclusão) serão detalhadas na entrega final, com base na validação manual e na análise de sensibilidade.
 
 ## Referências
@@ -355,3 +409,5 @@ Em resumo, a **classificação geral** de um repositório é razoavelmente está
 - DORA. *DORA's software delivery metrics: the four keys*.
 - Forsgren, N.; Humble, J.; Kim, G. *Accelerate: The Science of Lean Software and DevOps*.
 - Wohlin, C. et al. *Experimentation in Software Engineering*.
+- Landis, J. R.; Koch, G. G. *The measurement of observer agreement for categorical data*. Biometrics, 1977.
+- Feinstein, A. R.; Cicchetti, D. V. *High agreement but low kappa: I. The problems of two paradoxes*. Journal of Clinical Epidemiology, 1990.
