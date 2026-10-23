@@ -190,6 +190,9 @@ def consensus(rows: list[dict], raters: dict[str, dict], decisions: dict) -> tup
     names = list(raters)
     resolved: dict[tuple[str, str, str], tuple[str | None, str]] = {}
     divergences = []
+    # links para a reunião: página do repositório (dimensões de repositório) ou release + compare
+    links = {(r["repo"], ""): (r.get("repo_url") or f"https://github.com/{r['repo']}", "") for r in rows}
+    links.update({(r["repo"], r["tag_name"]): (r.get("release_url", ""), r.get("compare_url", "")) for r in rows})
     for dim in (*REPO_DIMENSIONS, *RELEASE_DIMENSIONS):
         for repo, tag in items(rows, dim):
             key = (dim, repo, tag)
@@ -212,6 +215,8 @@ def consensus(rows: list[dict], raters: dict[str, dict], decisions: dict) -> tup
                     "dimensao": dim,
                     "repo": repo,
                     "tag_name": tag,
+                    "link": links[(repo, tag)][0],
+                    "compare_url": links[(repo, tag)][1],
                     **{f"rotulo_{r}": label for r, label in zip(names, labels)},
                     "decisao": previous.get("decisao", ""),
                     "justificativa": previous.get("justificativa", ""),

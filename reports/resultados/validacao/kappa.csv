@@ -1,0 +1,4 @@
+dimension,label,raters,items,items_complete,unanimous,agreement_pct,fleiss_kappa,landis_koch
+tipo_projeto,Tipo do projeto,2,60,60,55,91.66666666666667,0.8753635230577483,quase perfeita
+entrega_real,Releases são entregas reais,2,60,60,57,95.0,-0.025641025641025057,pobre
+release_corretiva,Release corretiva,2,300,300,222,74.0,0.4771884355869342,moderada
