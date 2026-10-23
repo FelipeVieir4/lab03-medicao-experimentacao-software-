@@ -197,9 +197,31 @@ Números consolidados de `data/raw/execution_log.csv` e `data/raw/collect.log`.
 - Com 2 tokens, a coleta passou boa parte de cada hora parada esperando o reset da cota (as 10 mil chamadas da hora eram consumidas em ~15 minutos). Esse é o gargalo que o rodízio de tokens resolve; o paralelismo só ajuda enquanto há cota.
 - A coluna `speedup_vs_single_token` do `execution_log.csv` compara cada execução com o tempo mínimo que um único token levaria (chamadas ÷ 5.000/h).
 
-## 13. Resumo para Ameaças à validade
+## 13. Caso expo/expo: monorepo com uma release por pacote (#23)
 
-- **Construto:** release ≠ deploy; falha de CI ≠ falha em produção; `commit.author.date` distorcido por rebase/squash; heurística corretiva ainda não validada.
+O `expo/expo` aparece com 267 releases estáveis entre 29/09 e 01/10/2026, todas nos
+últimos 3 dias da janela. A suspeita era erro de coleta. Verificação feita direto na API
+(`GET /repos/expo/expo/releases`, 8 páginas, 751 releases em 22/10/2026):
+
+- **Não é erro de coleta.** A release mais antiga do repositório é de 29/09/2026
+  (`@expo/config-types@58.0.2`). Antes disso o expo não publicava releases no GitHub, e a
+  paginação parou porque a lista acabou, não por teto (`releases_cover_previous = false`).
+- **O que mudou foi o processo do projeto.** O expo é um monorepo e passou a publicar uma
+  release por pacote (`expo-camera@58.0.5`, `@expo/env@2.5.1`, ...). Só em 29/09 foram
+  146 releases publicadas com poucos segundos de diferença.
+- **Efeito nas métricas:** a deployment frequency (5,1 releases por semana) é artificial,
+  porque divide releases de 3 dias por 52 semanas e conta cada pacote como um deploy. O
+  compare entre releases de pacotes diferentes não tem relação com entrega (0 commits na
+  maioria dos pares). Todas as releases caem nos últimos 7 dias da janela, então o CFR (b)
+  fica sem valor (censura).
+- **Decisão:** o repositório foi mantido na amostra, porque atende aos critérios do guia e
+  removê-lo seria uma regra criada depois de ver os dados. O caso é registrado como ameaça
+  à validade de construto: em monorepos que versionam por pacote, "release" não equivale
+  a "deploy" do produto.
+
+## 14. Resumo para Ameaças à validade
+
+- **Construto:** release ≠ deploy (caso extremo: monorepos com uma release por pacote, como o expo/expo, seção 13); falha de CI ≠ falha em produção; `commit.author.date` distorcido por rebase/squash; heurística corretiva ainda não validada.
 - **Interna:** meses com mais de 1.000 runs só têm os 1.000 mais recentes; releases com mais de 2.000 commits truncadas no lead time por commit; repositórios mais antigos e populares tendem a ter mais releases.
 - **Externa:** amostra de repositórios open-source populares (≥ 1.000 estrelas), formada em ordem decrescente de estrelas e não por sorteio (seção 2.1); não representa projetos corporativos.
 - **Conclusão:** quantidade de releases e episódios varia muito entre repositórios; medianas de poucos valores são instáveis.
