@@ -64,8 +64,8 @@ Todas as consultas consideram apenas o *default branch* informado pela API (`def
 | Lead time (a), por release (RQ 02) | Data de R − data do commit mais antigo de R; mediana entre as releases do repositório |
 | Lead time (b), por commit (RQ 02) | Data de R − data de cada commit de R; mediana de todos os commits do repositório |
 | CFR (a), proxy de CI (RQ 03) | Runs com falha ÷ (falhas + sucessos), com todos os workflows juntos |
-| CFR (b), proxy de entrega (RQ 03) | Releases seguidas, em até 7 dias, por uma release corretiva ÷ releases avaliadas |
-| Release corretiva (heurística v1) | Só o PATCH do SemVer muda **e** há, entre as duas releases, commit com `fix`, `fixes`, `fixed`, `bugfix`, `hotfix` ou `revert`. Para tags fora do SemVer, basta o commit |
+| CFR (b), proxy de entrega (RQ 03) | Releases cuja próxima release estável **da mesma linha MAJOR.MINOR** sai em até 7 dias e é corretiva ÷ releases avaliadas |
+| Release corretiva (heurística v6, seção 4.4) | A versão é um patch da própria linha (PATCH > 0, como 2.3.1 ou 8.4.15) **e** as release notes têm pelo menos tantos termos de correção (`fix`, `bug`, `hotfix`, `regression`, `crash`, `security`...) quanto de funcionalidade (`feature`, `new`, `added`, `improvement`...). Fora do SemVer: mais termos de correção que de funcionalidade |
 | Tempo de recuperação (RQ 04) | Dentro de cada workflow, em ordem de `run_started_at`: `updated_at` do próximo sucesso − `run_started_at` da primeira falha do episódio; mediana dos episódios do repositório |
 
 Duas regras de censura evitam descartar casos que deixariam os repositórios com aparência melhor do que têm:
@@ -169,18 +169,29 @@ A heurística de release corretiva é comparada com o rótulo de consenso por pr
 
 | Versão | Regra | Precisão | Recall | F1 |
 |---|---|---:|---:|---:|
-| v1 (usada nos resultados) | só o PATCH muda **e** há commit de correção | 0,591 | 0,614 | 0,602 |
+| v1 (versão inicial) | só o PATCH muda **e** há commit de correção | 0,591 | 0,614 | 0,602 |
 | v2 | há commit de correção | 0,430 | 0,898 | 0,582 |
 | v3 | só o PATCH muda | 0,605 | 0,701 | 0,650 |
 | v4 | só o PATCH muda **ou** há commit de correção | 0,442 | 0,984 | 0,610 |
+| v5 | é patch da própria linha (PATCH > 0) | 0,590 | 0,929 | 0,722 |
+| **v6 (adotada)** | patch da própria linha **e** notas com termos de correção ≥ termos de funcionalidade | **0,728** | **0,843** | **0,781** |
+| v7 | patch da própria linha **e** há commit de correção | 0,611 | 0,843 | 0,709 |
 
-*Commit de correção: mensagem com `fix`, `fixes`, `fixed`, `bugfix`, `hotfix` ou `revert`. Para tags fora do SemVer, a v1 usa só o commit.*
+*Commit de correção: mensagem com `fix`, `fixes`, `fixed`, `bugfix`, `hotfix` ou `revert`. Nas versões v1 a v4, "só o PATCH muda" compara a release com a anterior **por data**; nas v5 a v7, olha só a própria versão. Para tags fora do SemVer, a v1 usa só o commit.*
 
-**Nenhuma das quatro versões atinge a meta.** Os erros mostram por quê:
+**Nenhuma das quatro primeiras versões atinge a meta.** Os erros mostram por quê:
 - **O commit de correção quase não discrimina.** 265 das 297 releases (89,2%) têm ao menos um commit com essas palavras, porque quase toda release reúne alguma correção, ainda que pequena. Por isso as versões que dependem só dele (v2) ou que o aceitam como alternativa (v4) têm recall alto e precisão baixa.
 - **O PATCH é o sinal mais informativo, mas não basta.** A v3 tem o melhor F1 (0,650). A v1, que exige as duas condições, perde recall sem ganhar precisão.
 
-> *Versões refinadas (v5 em diante) e seus F1: a preencher após o refinamento.*
+**O refinamento.** A análise dos falsos negativos da v3 mostrou que a maior parte eram **releases de manutenção de linhas antigas**: por exemplo, `php-8.4.15` publicada depois da 8.5, `v8.19.9` do Elasticsearch publicada depois da 9.x, ou a `v3.19.3` do Nuxt publicada depois da 4.1. Comparadas com a release anterior **por data**, que é de outra linha, elas parecem mudanças de MINOR ou MAJOR. Três versões novas foram testadas a partir desse achado:
+
+- **v5:** basta a versão ser um patch da própria linha (PATCH > 0). Só essa mudança leva o F1 a 0,722, com recall de 0,929.
+- **v6:** v5 **e** release notes com pelo menos tantos termos de correção quanto de funcionalidade. As notas filtram as releases de patch que trazem principalmente novidades e elevam a precisão para 0,728, com **F1 = 0,781**.
+- **v7:** v5 **e** commit de correção. Fica em 0,709: o commit de correção continua quase não discriminando.
+
+A **v6 foi adotada** e passou a ser usada no CFR (b), no rework rate e na combinação C2. Como a regra foi escolhida olhando a mesma amostra em que é avaliada, a robustez foi conferida em 200 divisões aleatórias dos 60 repositórios em duas metades: a v6 fica com F1 ≥ 0,70 em 98% das metades (mediana de 0,781), contra 3% da v1. O mesmo achado levou a um ajuste no CFR (b): a release que corrige R passa a ser a próxima **da mesma linha** MAJOR.MINOR, e não a próxima por data, que em repositórios com várias linhas pode ser um backport sem relação com R.
+
+O F1 de 0,781 é coerente com o teto dado pela própria concordância humana (κ = 0,477, seção 4.3). A heurística erra 15,0% das 220 releases em que os avaliadores concordaram, mas 35,1% das 77 em que divergiram: os casos difíceis para as pessoas também são difíceis para a regra.
 
 O tipo do projeto definido no consenso é usado como fator na RQ 06.
 
@@ -237,7 +248,9 @@ As duas variantes de CFR medem coisas diferentes e produzem valores bem diferent
 - **CFR (a), falha de pipeline:** mediana de **4,9%** (IQR de 2,3% a 11,3%). Com esse valor, 82,5% dos repositórios caem na faixa Elite (≤ 15%), o que torna o CFR (a) a métrica menos discriminante de C1.
 - **CFR (b), falha de entrega:** mediana de **16,7%** (IQR de 2,4% a 36,4%), mais de três vezes a do CFR (a) e com dispersão quase quatro vezes maior. Com essa variante, só 48,0% dos repositórios seriam Elite. Além disso, 87 repositórios (22,8%) não tiveram nenhuma release seguida de correção em até 7 dias (CFR (b) = 0).
 
-A correlação de Spearman entre as variantes é fraca: ρ = 0,138 (p = 0,007, n = 381). Um repositório com pipeline instável não tende a ser o mesmo que publica releases corretivas, o que confirma a hipótese de que as variantes não são equivalentes. O CFR (a) registra qualquer falha de CI no default branch, inclusive testes instáveis (*flaky*) e falhas de lint corrigidas em minutos, que nunca chegam ao usuário. Já o CFR (b) se aproxima mais da definição DORA, mas depende da heurística de release corretiva (v1: só o PATCH muda e há commit com `fix`, `hotfix` ou `revert`), que **não atingiu a meta de F1 ≥ 0,70** na validação contra a amostra-ouro (F1 = 0,602; seção 4.4). Os valores do CFR (b) vão mudar quando a heurística for refinada.
+A correlação de Spearman entre as variantes é fraca: ρ = 0,138 (p = 0,007, n = 381). Um repositório com pipeline instável não tende a ser o mesmo que publica releases corretivas, o que confirma a hipótese de que as variantes não são equivalentes. O CFR (a) registra qualquer falha de CI no default branch, inclusive testes instáveis (*flaky*) e falhas de lint corrigidas em minutos, que nunca chegam ao usuário. Já o CFR (b) se aproxima mais da definição DORA, mas depende da heurística de release corretiva, validada contra a amostra-ouro na seção 4.4.
+
+> *Os valores do CFR (b) nesta seção, na 5.5, na 5.7 e na 5.8 ainda foram calculados com a heurística v1 (F1 = 0,602). Eles serão atualizados com a v6 (F1 = 0,781) após o recálculo do dataset (#22).*
 
 Por censura, **1.306 das 27.571 releases (4,74%)**, de 161 repositórios, ficaram fora do denominador do CFR (b) por terem sido publicadas nos últimos 7 dias da janela. Dois repositórios ficaram sem CFR (b) porque todas as suas releases caíram nesse período: `expo/expo`, com 267 releases entre 29/09 e 01/10/2026, e `Alishahryar1/free-claude-code`. No caso do `expo/expo`, a verificação mostrou que não se trata de erro de coleta: o projeto, um monorepo, só passou a publicar releases no GitHub em 29/09/2026, e publica uma release por pacote. Isso também infla a sua deployment frequency (5,1 por semana) e é um exemplo extremo de release que não equivale a deploy.
 
@@ -341,7 +354,7 @@ Uma observação de método: o kappa ponderado depende da ordem das categorias. 
 
 ### 5.8 RQ 08 (bônus): rework rate
 
-O *rework rate* é a proporção de releases corretivas sobre o total de releases estáveis da janela, usando a mesma heurística de release corretiva do CFR (b) (v1). Resultados gerados por `python -m analysis.rework`.
+O *rework rate* é a proporção de releases corretivas sobre o total de releases estáveis da janela, usando a mesma heurística de release corretiva do CFR (b). Resultados gerados por `python -m analysis.rework` (valores ainda da heurística v1; ver a nota da seção 5.3).
 
 **Tabela 13. Rework rate e CFR (b).**
 
@@ -363,7 +376,7 @@ A diferença vem do que cada métrica conta:
 - **Sequências de patches:** uma série como 2.3.1 → 2.3.2 → 2.3.3 conta três vezes no rework rate. No CFR (b), cada release só falha se a seguinte sair em até 7 dias.
 - **Censura:** o rework rate não precisa observar o que vem depois da release, então não tem censura no fim da janela.
 
-O rework rate mede, portanto, **quanto do esforço de entrega é gasto com retrabalho**, enquanto o CFR (b) mede **quantas entregas precisaram ser corrigidas logo em seguida**. O valor alto do rework rate também indica que a heurística v1 é ampla, já que quase toda release de patch tem algum commit com `fix`. Esses números dependem da validação da heurística contra a amostra-ouro e serão atualizados se ela for refinada.
+O rework rate mede, portanto, **quanto do esforço de entrega é gasto com retrabalho**, enquanto o CFR (b) mede **quantas entregas precisaram ser corrigidas logo em seguida**. O valor alto do rework rate também reflete que a heurística v1 era ampla, já que quase toda release de patch tem algum commit com `fix`. Com a v6, mais restritiva, espera-se um rework rate menor.
 
 ## 6. Discussão
 
@@ -399,10 +412,45 @@ A RQ 07 permite separar o que é robusto do que depende da definição:
 
 Em resumo, a **classificação geral** de um repositório é razoavelmente estável (κ ≥ 0,56 e mudanças quase sempre de um nível), mas as conclusões sobre **estabilidade** dependem da escolha do proxy de falha. Afirmações como "projetos que entregam mais rápido falham mais" ou "não falham mais" não podem ser feitas com esses dados sem dizer qual CFR foi usado. Isso reforça a principal limitação do estudo: o GitHub não registra falhas em produção, e cada proxy captura uma parte diferente do conceito.
 
-## 7. Limitações e próximos passos
+## 7. Ameaças à validade
 
-- A heurística de release corretiva, que sustenta o CFR (b), o rework rate e a C2, não atingiu F1 ≥ 0,70 em nenhuma das quatro versões testadas (seção 4.4). Ela está sendo refinada, e as RQs 03 (b), 05, 07 e 08 serão recalculadas com a versão final.
-- As ameaças à validade (construto, interna, externa e de conclusão) serão detalhadas na entrega final, com base na validação manual e na análise de sensibilidade.
+As ameaças seguem as quatro categorias de Wohlin et al. (2012) e se apoiam na validação manual (seção 4) e na análise de sensibilidade (seção 5.7).
+
+### 7.1 Validade de construto
+
+- **Release não é deploy.** Uma biblioteca que publica uma release não coloca nada em produção: quem faz isso são os seus usuários. A rotulação manual atenua essa ameaça na amostra-ouro (em 117 de 120 rótulos os avaliadores consideraram as releases entregas reais), mas não a elimina. Monorepos com uma release por pacote, como o `expo/expo`, inflam a frequência de deploy.
+- **Falha de CI não é falha em produção.** O CFR (a) mede o pipeline do default branch depois do merge, e 82,5% dos repositórios ficam na faixa Elite por esse proxy. O tempo de recuperação também mede a recuperação do pipeline, e não a de um serviço em produção.
+- **A heurística de release corretiva erra.** Com precisão de 0,728 e recall de 0,843, cerca de um quarto das releases que ela marca não são corretivas para os avaliadores. O próprio conceito é ambíguo para humanos (κ = 0,477).
+- **O consenso, nos casos divergentes, é de um só avaliador.** O grupo tem dois integrantes, e não três como prevê o enunciado. Nos 78 casos divergentes de release corretiva (26% da amostra-ouro), o rótulo adotado foi o de um avaliador, sem revisão caso a caso (seção 4.3). A avaliação da heurística é, nessa parte, uma comparação com o julgamento de uma pessoa.
+- **A data do commit pode ser distorcida.** O `commit.author.date` não muda com rebase e squash, mas o commit pode ter sido escrito muito antes de entrar no default branch, o que infla o lead time.
+
+### 7.2 Validade interna
+
+- **Fatores correlacionados.** Idade e número de contribuidores têm ρ = 0,56, e as linguagens com melhor desempenho são justamente as dos repositórios mais novos. Os testes de um fator por vez da RQ 06 não separam esses efeitos (seção 6.2).
+- **O CFR (b) depende da frequência por construção.** Uma release só falha se a correção sair em até 7 dias, e quem publica mais tem mais chances de cumprir essa condição. Parte da correlação da RQ 05 com o CFR (b) pode vir da definição, e não do comportamento dos projetos.
+- **A heurística foi escolhida e avaliada na mesma amostra.** A verificação em metades aleatórias (F1 ≥ 0,70 em 98% delas) reduz, mas não elimina, o risco de a regra estar ajustada a esses 60 repositórios.
+- **Cortes da coleta.** Em 96 repositórios, algum mês passou do teto de 1.000 runs e só os mais recentes entraram, o que afeta o CFR (a) e o tempo de recuperação. Em 719 releases (2,6%), o compare foi cortado em 2.000 commits, o que tende a superestimar levemente o lead time (b).
+
+### 7.3 Validade externa
+
+- **Amostra de projetos populares.** Só entram repositórios com pelo menos 1.000 estrelas, não arquivados, que usam GitHub Actions e publicaram pelo menos 5 releases e 50 runs válidos em 12 meses. Os resultados não se aplicam a projetos pequenos, a projetos que versionam só por tags (46% dos candidatos com Actions foram descartados por poucas releases) nem a equipes corporativas, cujo processo de deploy não aparece no GitHub.
+- **Uma única janela e uma única plataforma.** Os 12 meses de 02/10/2025 a 01/10/2026 podem não representar outros períodos, e projetos que usam outro CI ou outra forja de código ficam de fora.
+
+### 7.4 Validade de conclusão
+
+- **Muitas comparações.** A RQ 06 faz dezenas de testes. A correção de Holm e o tamanho de efeito (ε² e Cliff's delta) evitam tratar como achado diferenças pequenas ou casuais. Dois testes do CFR (a) deixaram de ser significativos com a correção.
+- **Subgrupos pequenos.** O tipo do projeto só existe para os 60 repositórios da amostra-ouro, e alguns grupos (como "outro") têm poucos repositórios, o que reduz o poder dos testes.
+- **Significância com n grande.** Com n ≈ 380, correlações fracas já são significativas (ρ = 0,161 tem p = 0,002). Por isso, a interpretação se baseia no tamanho de ρ e não só no p-valor.
+- **Paradoxo do kappa.** Em dimensões quase sem variação, como a entrega real, o kappa fica baixo mesmo com concordância de 95%. A concordância bruta é reportada junto com o kappa.
+
+## 8. Replicação cruzada
+
+> *A preencher na entrega final: pipeline replicado, problemas encontrados, comparação com o CSV original (diferença relativa por métrica e % de repositórios com a mesma classificação DORA) e Issues abertas e recebidas.*
+
+## 9. Repositório
+
+- Código, dados e resultados: https://github.com/FelipeVieir4/lab03-medicao-experimentacao-software-
+- GitHub Projects: `<preencher>`
 
 ## Referências
 
