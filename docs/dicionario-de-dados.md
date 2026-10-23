@@ -86,7 +86,7 @@ workflow runs e tags. É a entrada do passo `dataset`.
 | cfr_delivery | real | proporção de 0 a 1 | RQ 03 (b): releases seguidas por release corretiva em ≤ 7 dias / releases avaliadas |
 | n_releases_cfr_evaluated | inteiro | | denominador do CFR (b) |
 | n_releases_cfr_censored | inteiro | | releases nos últimos 7 dias da janela (censuradas) |
-| rework_rate | real | proporção de 0 a 1 | RQ 08: releases corretivas / releases na janela |
+| rework_rate | real | proporção de 0 a 1 | RQ 08: releases corretivas (heurística v6) / releases na janela |
 | recovery_hours | real | horas | RQ 04: mediana dos episódios (`updated_at` do sucesso − `run_started_at` da 1ª falha), por workflow |
 | n_recovery_episodes | inteiro | | episódios encerrados |
 | n_recovery_censored | inteiro | | episódios sem recuperação até o fim da janela |
@@ -94,17 +94,27 @@ workflow runs e tags. É a entrada do passo `dataset`.
 | class_c1_* | texto | Elite/High/Medium/Low | C1 (referência): release, lead time (a), CFR (a), recuperação |
 | class_c2_* | texto | Elite/High/Medium/Low | C2: release + pré-release, lead time (b), CFR (b), recuperação |
 
-**Heurística v1 de release corretiva:** a versão muda apenas no PATCH do SemVer **e**
-existe ao menos um commit com `revert`, `hotfix`, `fix`, `fixes`, `fixed` ou `bugfix`
-na mensagem entre as duas releases. Tags fora do SemVer: basta o commit. Deve ser
-validada contra a amostra-ouro (seção 6) e refinada se F1 < 0,70.
+**Heurística de release corretiva (v6, adotada após a validação):** a versão é um patch da
+própria linha MAJOR.MINOR (PATCH > 0, por exemplo 2.3.1 ou 8.4.15) **e** as release notes
+têm pelo menos tantos termos de correção (`fix`, `bug`, `hotfix`, `regression`, `crash`,
+`patch`, `revert`, `security`, `cve`...) quanto de funcionalidade (`feature`, `new`, `added`,
+`support`, `enhancement`, `improvement`...). Tags fora do SemVer: mais termos de correção
+que de funcionalidade. F1 = 0,781 contra o consenso da amostra-ouro (v1: 0,602). Todas as
+versões testadas estão em `reports/resultados/validacao/heuristica.md`.
+
+**CFR (b):** a release R falha se a **próxima release estável da mesma linha MAJOR.MINOR**
+sair em até 7 dias e for corretiva. Em repositórios que mantêm várias linhas, a próxima
+release por data pode ser um backport de outra linha e não corrige R.
 
 ## data/processed/releases.csv: uma linha por release na janela
 
 `repo`, `tag_name`, `published_at`, `prerelease`, `html_url`, `previous_tag` (release estável anterior),
 `compare_status` (`ok`, `truncated` = release com mais de 2.000 commits, só os 2.000 mais antigos foram baixados, `first_release`, `error_<status>`), `total_commits_api` (`total_commits` do compare), `n_commits`, `oldest_commit_date`,
-`lead_time_release_days` (dias), `patch_bump` (bool), `has_fix_commit` (bool),
-`is_corrective_v1` (bool), `cfr_b_status` (`failed`, `ok`, `censored`).
+`lead_time_release_days` (dias), `patch_bump` (bool: só o PATCH mudou em relação à release estável anterior por data),
+`has_fix_commit` (bool), `line_patch` (bool: PATCH > 0, patch da própria linha), `notes_fix_terms` e
+`notes_feature_terms` (inteiros: termos de correção e de funcionalidade nas release notes),
+`is_corrective_v1` (bool: heurística v1, mantida para comparação), `is_corrective` (bool: heurística
+v6, usada no CFR b e no rework rate), `cfr_b_status` (`failed`, `ok`, `censored`).
 
 ## data/processed/release_commits.csv.gz: commits incluídos em cada release
 

@@ -1,5 +1,8 @@
 version,description,n,positives,tp,fp,fn,tn,precision,recall,f1,meets_target
 v1,só o PATCH muda E há commit fix/hotfix/revert (fora do SemVer: só o commit),297,127,78,54,49,116,0.5909090909090909,0.6141732283464567,0.6023166023166022,False
 v2,há commit fix/hotfix/revert,297,127,114,151,13,19,0.43018867924528303,0.8976377952755905,0.5816326530612245,False
-v3,só o PATCH muda,297,127,89,58,38,112,0.6054421768707483,0.7007874015748031,0.6496350364963503,False
+v3,só o PATCH muda em relação à anterior por data,297,127,89,58,38,112,0.6054421768707483,0.7007874015748031,0.6496350364963503,False
 v4,só o PATCH muda OU há commit fix/hotfix/revert,297,127,125,158,2,12,0.4416961130742049,0.984251968503937,0.6097560975609756,False
+v5,é patch da própria linha MAJOR.MINOR (PATCH > 0),297,127,118,82,9,88,0.59,0.9291338582677166,0.7217125382262997,True
+v6,patch da própria linha E notas com termos de correção ≥ termos de funcionalidade,297,127,107,40,20,130,0.7278911564625851,0.84251968503937,0.781021897810219,True
+v7,patch da própria linha E há commit fix/hotfix/revert,297,127,107,68,20,102,0.6114285714285714,0.84251968503937,0.7086092715231788,True

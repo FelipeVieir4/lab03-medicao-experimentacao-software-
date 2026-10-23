@@ -1,6 +1,6 @@
 """Seção 6, passo 5: precisão, recall e F1 da heurística de release corretiva (CFR b).
 
-Uso: python -m analysis.heuristica [--consenso CSV] [--releases CSV] [--output PASTA]
+Uso: python -m analysis.heuristica [--consenso CSV] [--releases CSV | --raw PASTA] [--output PASTA]
 
 Compara cada versão da heurística (VERSIONS) com o rótulo de consenso da amostra-ouro
 (data/gold/consenso.csv, gerado por analysis.concordancia) e gera em
@@ -9,17 +9,21 @@ reports/resultados/validacao/:
   - heuristica_detalhe.csv  cada release avaliada com o consenso e a saída de cada versão
   - heuristica.md           tabela formatada para o artigo
 
-As versões usam só as colunas patch_bump e has_fix_commit de releases.csv, sem a API.
+As versões v1-v5 e v7 usam colunas de releases.csv. A v6 também usa as release notes
+(colunas notes_fix_terms e notes_feature_terms): elas existem em releases.csv depois de
+recalcular o dataset; antes disso, use --raw data/raw/repos para calculá-las a partir dos
+JSONs brutos, com o mesmo código do pipeline (pipeline.dataset.analyse_repository).
 """
 from __future__ import annotations
 
 import argparse
 import csv
+import json
 from pathlib import Path
 from typing import Callable
 
 from analysis.descritivas import _fmt
-from pipeline.dataset import write_csv
+from pipeline.dataset import analyse_repository, is_line_patch, write_csv
 
 DEFAULT_CONSENSUS = Path("data/gold/consenso.csv")
 DEFAULT_RELEASES = Path("data/processed/releases.csv")
@@ -31,18 +35,36 @@ def to_bool(value: str | None) -> bool | None:
     return {"true": True, "false": False}.get((value or "").strip().lower())
 
 
-def _v1(patch: bool | None, fix: bool) -> bool:
-    return fix if patch is None else (patch and fix)
+def _int(value) -> int | None:
+    return None if value in (None, "") else int(float(value))
 
 
-# nome -> (descrição, regra(patch_bump, has_fix_commit)); patch_bump é None fora do SemVer
-VERSIONS: dict[str, tuple[str, Callable[[bool | None, bool], bool]]] = {
+def _v1(f: dict) -> bool:
+    return f["fix"] if f["patch"] is None else (f["patch"] and f["fix"])
+
+
+def _v6(f: dict) -> bool | None:
+    """Mesma regra de pipeline.dataset.is_corrective_v6, a partir das features."""
+    if f["fix_terms"] is None:
+        return None  # sem release notes: versão não avaliável
+    if f["line_patch"] is None:
+        return f["fix_terms"] > f["feature_terms"]
+    return f["line_patch"] and f["fix_terms"] >= f["feature_terms"]
+
+
+# nome -> (descrição, regra(features)). Features: patch (só o PATCH mudou em relação à anterior
+# por data; None fora do SemVer), fix (commit fix/hotfix/revert), line_patch (PATCH > 0, patch da
+# própria linha MAJOR.MINOR), fix_terms e feature_terms (termos nas release notes)
+VERSIONS: dict[str, tuple[str, Callable[[dict], bool | None]]] = {
     "v1": ("só o PATCH muda E há commit fix/hotfix/revert (fora do SemVer: só o commit)", _v1),
-    "v2": ("há commit fix/hotfix/revert", lambda patch, fix: fix),
-    "v3": ("só o PATCH muda", lambda patch, fix: bool(patch)),
-    "v4": ("só o PATCH muda OU há commit fix/hotfix/revert", lambda patch, fix: bool(patch) or fix),
+    "v2": ("há commit fix/hotfix/revert", lambda f: f["fix"]),
+    "v3": ("só o PATCH muda em relação à anterior por data", lambda f: bool(f["patch"])),
+    "v4": ("só o PATCH muda OU há commit fix/hotfix/revert", lambda f: bool(f["patch"]) or f["fix"]),
+    "v5": ("é patch da própria linha MAJOR.MINOR (PATCH > 0)", lambda f: bool(f["line_patch"])),
+    "v6": ("patch da própria linha E notas com termos de correção ≥ termos de funcionalidade", _v6),
+    "v7": ("patch da própria linha E há commit fix/hotfix/revert", lambda f: bool(f["line_patch"]) and f["fix"]),
 }
-CURRENT = "v1"  # versão usada em pipeline/dataset.py (is_corrective)
+CURRENT = "v6"  # versão usada em pipeline/dataset.py (is_corrective_v6)
 
 
 def precision_recall_f1(truth: list[bool], predicted: list[bool]) -> dict:
@@ -60,6 +82,14 @@ def precision_recall_f1(truth: list[bool], predicted: list[bool]) -> dict:
 def load_csv(path: Path) -> list[dict]:
     with path.open(newline="", encoding="utf-8-sig") as file:
         return list(csv.DictReader(file))
+
+
+def releases_from_raw(raw_dir: Path) -> list[dict]:
+    """Linhas de releases.csv recalculadas dos JSONs brutos, com o mesmo código do pipeline."""
+    rows = []
+    for path in sorted(raw_dir.glob("*.json")):
+        rows.extend(analyse_repository(json.loads(path.read_text(encoding="utf-8")))["releases"])
+    return [{k: ("" if v is None else str(v)) for k, v in r.items()} for r in rows]
 
 
 def evaluate(consensus_rows: list[dict], release_rows: list[dict]) -> tuple[list[dict], list[dict], dict]:
@@ -81,15 +111,22 @@ def evaluate(consensus_rows: list[dict], release_rows: list[dict]) -> tuple[list
         if fix is None:  # sem release estável anterior: a heurística não se aplica
             skipped["sem_release_anterior"] += 1
             continue
-        patch = to_bool(release.get("patch_bump"))
-        row = {"repo": c["repo"], "tag_name": c["tag_name"], "consenso": label,
-               "patch_bump": patch, "has_fix_commit": fix}
+        features = {
+            "patch": to_bool(release.get("patch_bump")),
+            "fix": fix,
+            "line_patch": is_line_patch(c["tag_name"]),
+            "fix_terms": _int(release.get("notes_fix_terms")),
+            "feature_terms": _int(release.get("notes_feature_terms")),
+        }
+        row = {"repo": c["repo"], "tag_name": c["tag_name"], "consenso": label, **features}
         for name, (_, rule) in VERSIONS.items():
-            row[name] = rule(patch, fix)
+            row[name] = rule(features)
         detail.append(row)
     truth = [d["consenso"] == "sim" for d in detail]
     metrics = []
     for name, (description, _) in VERSIONS.items():
+        if any(d[name] is None for d in detail):
+            continue  # faltam as release notes: rode com --raw ou recalcule o dataset
         m = precision_recall_f1(truth, [d[name] for d in detail])
         metrics.append({"version": name, "description": description, "n": len(detail),
                         "positives": sum(truth), **m,
@@ -113,19 +150,24 @@ def to_markdown(metrics: list[dict], skipped: dict) -> str:
         "|---|---|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
     for m in metrics:
-        name = f"**{m['version']}** (atual)" if m["version"] == CURRENT else m["version"]
+        name = f"**{m['version']}** (adotada)" if m["version"] == CURRENT else m["version"]
         lines.append(
             f"| {name} | {m['description']} | {m['tp']} | {m['fp']} | {m['fn']} | {m['tn']} | "
             f"{_fmt(m['precision'], 3)} | {_fmt(m['recall'], 3)} | {_fmt(m['f1'], 3)} | "
             f"{'atinge' if m['meets_target'] else 'não atinge'} |"
         )
+    missing = [v for v in VERSIONS if v not in {m["version"] for m in metrics}]
+    if missing:
+        lines += ["", f"Não avaliadas (faltam as release notes): {', '.join(missing)}. "
+                      "Rode com `--raw data/raw/repos` ou recalcule o dataset."]
     return "\n".join(lines) + "\n"
 
 
-def run(consensus_path: Path, releases_path: Path, output_dir: Path) -> dict:
+def run(consensus_path: Path, releases_path: Path, output_dir: Path, raw_dir: Path | None = None) -> dict:
     if not consensus_path.exists():
         raise SystemExit(f"{consensus_path} não existe: rode antes `python -m analysis.concordancia`")
-    metrics, detail, skipped = evaluate(load_csv(consensus_path), load_csv(releases_path))
+    release_rows = releases_from_raw(raw_dir) if raw_dir else load_csv(releases_path)
+    metrics, detail, skipped = evaluate(load_csv(consensus_path), release_rows)
     if not detail:
         raise SystemExit("nenhuma release com rótulo de consenso: termine a rotulação e o desempate primeiro")
     write_csv(output_dir / "heuristica.csv", metrics)
@@ -138,9 +180,10 @@ def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description="Precisão, recall e F1 da heurística de release corretiva")
     parser.add_argument("--consenso", type=Path, default=DEFAULT_CONSENSUS)
     parser.add_argument("--releases", type=Path, default=DEFAULT_RELEASES)
+    parser.add_argument("--raw", type=Path, help="pasta com os JSONs brutos (data/raw/repos), no lugar de --releases")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args(argv)
-    run(args.consenso, args.releases, args.output)
+    run(args.consenso, args.releases, args.output, args.raw)
     print((args.output / "heuristica.md").read_text(encoding="utf-8"))
 
 

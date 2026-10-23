@@ -91,3 +91,35 @@ def test_single_release_repository():
     assert (m["n_releases_cfr_evaluated"], m["cfr_delivery"], m["rework_rate"]) == (1, 0.0, 0.0)
     # sem runs: CFR (a) e recuperação indefinidos, logo sem classificação geral
     assert m["cfr_ci"] is None and m["recovery_hours"] is None and m["class_c1_overall"] is None
+
+
+def test_heuristic_v6_and_same_line_cfr_b():
+    from pipeline.dataset import is_corrective_v6, is_line_patch, notes_terms, same_line
+
+    assert is_line_patch("v8.19.9") and not is_line_patch("v9.0.0") and is_line_patch("nightly") is None
+    assert notes_terms("## Bug Fixes\n- Fixed a crash\n## Features\n- New export") == (4, 2)  # bug, fixes, fixed, crash x features, new
+    assert is_corrective_v6("v2.3.1", "Fixes a regression") and not is_corrective_v6("v2.3.1", "New feature: export")
+    assert not is_corrective_v6("v2.4.0", "fix fix fix")
+    assert same_line("v2.3.0", "v2.3.4") and not same_line("v2.3.0", "v1.9.8") and same_line("a", "v1")
+
+    # v9.0.0 é seguida, 2 dias depois, por um backport v8.19.9 (outra linha) e só 20 dias
+    # depois pelo patch v9.0.1 da própria linha: v9.0.0 não falhou
+    rel = lambda i, tag, d, body="": {"id": i, "tag_name": tag, "published_at": d, "prerelease": False,
+                                      "html_url": "", "body": body}
+    data = {
+        "window": {"start": "2026-01-01", "end": "2026-12-31"},
+        "repository": {"full_name": "o/linhas", "created_at": "2020-01-01T00:00:00Z"},
+        "releases": [
+            rel(1, "v8.19.8", "2026-02-01T00:00:00Z"),
+            rel(2, "v9.0.0", "2026-03-01T00:00:00Z"),
+            rel(3, "v8.19.9", "2026-03-03T00:00:00Z", "Bug fixes: fix crash"),
+            rel(4, "v9.0.1", "2026-03-21T00:00:00Z", "Bug fixes: fix crash"),
+        ],
+        "compares": [], "workflow_runs": [], "tags": [], "workflows": [], "contributors": 1,
+    }
+    result = analyse_repository(data)
+    status = {r["tag_name"]: r["cfr_b_status"] for r in result["releases"]}
+    corrective = {r["tag_name"]: r.get("is_corrective") for r in result["releases"]}
+    assert status["v9.0.0"] == "ok" and status["v8.19.8"] == "ok"  # v8.19.9 sai 30 dias depois da v8.19.8
+    assert corrective["v8.19.9"] and corrective["v9.0.1"] and not corrective["v9.0.0"]
+    assert result["metrics"]["rework_rate"] == 2 / 4

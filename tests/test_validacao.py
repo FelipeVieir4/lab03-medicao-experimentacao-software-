@@ -122,10 +122,34 @@ def test_precision_recall_f1_guide_example():
     assert precision_recall_f1([False], [False])["precision"] is None
 
 
+def _f(patch=None, fix=False, line_patch=None, fix_terms=0, feature_terms=0):
+    return {"patch": patch, "fix": fix, "line_patch": line_patch, "fix_terms": fix_terms,
+            "feature_terms": feature_terms}
+
+
 def test_versions_rules():
     v1 = VERSIONS["v1"][1]
-    assert v1(True, True) and not v1(True, False) and not v1(False, True) and v1(None, True)
-    assert VERSIONS["v4"][1](False, True) and not VERSIONS["v3"][1](None, True)
+    assert v1(_f(True, True)) and not v1(_f(True, False)) and not v1(_f(False, True)) and v1(_f(None, True))
+    assert VERSIONS["v4"][1](_f(False, True)) and not VERSIONS["v3"][1](_f(None, True))
+    # v5/v7: patch da própria linha, mesmo que a anterior por data seja de outra linha
+    assert VERSIONS["v5"][1](_f(patch=False, line_patch=True))
+    assert VERSIONS["v7"][1](_f(line_patch=True, fix=True)) and not VERSIONS["v7"][1](_f(line_patch=True))
+    v6 = VERSIONS["v6"][1]
+    assert v6(_f(line_patch=True, fix_terms=2, feature_terms=2))
+    assert not v6(_f(line_patch=True, fix_terms=1, feature_terms=3))
+    assert not v6(_f(line_patch=False, fix_terms=5))
+    assert v6(_f(line_patch=None, fix_terms=2, feature_terms=1)) and not v6(_f(line_patch=None))
+    assert v6(_f(fix_terms=None)) is None  # sem release notes: não avaliável
+
+
+def test_v6_matches_pipeline_rule():
+    from pipeline.dataset import is_corrective_v6, is_line_patch, notes_terms
+    cases = [("v2.3.1", "## Bug fixes\n- fix crash"), ("v2.3.1", "## New features\n- add export"),
+             ("8.19.9", ""), ("v2.4.0", "fix fix fix"), ("nightly", "fix crash"), ("nightly", "")]
+    for tag, body in cases:
+        fix_terms, feature_terms = notes_terms(body)
+        features = _f(line_patch=is_line_patch(tag), fix_terms=fix_terms, feature_terms=feature_terms)
+        assert VERSIONS["v6"][1](features) == is_corrective_v6(tag, body), (tag, body)
 
 
 def test_heuristica_end_to_end(tmp_path):
@@ -143,4 +167,6 @@ def test_heuristica_end_to_end(tmp_path):
     assert result["skipped"] == {"sem_consenso": 1, "sem_release_anterior": 1, "fora_do_dataset": 0}
     v1 = next(m for m in result["metrics"] if m["version"] == "v1")
     assert (v1["tp"], v1["fn"], v1["precision"], v1["recall"]) == (1, 1, 1.0, 0.5)
-    assert (out / "heuristica.md").read_text(encoding="utf-8").count("| v") == 3
+    report = (out / "heuristica.md").read_text(encoding="utf-8")
+    # sem as colunas das release notes, a v6 não é avaliada e o relatório avisa
+    assert report.count("| v") == 6 and "Não avaliadas (faltam as release notes): v6" in report

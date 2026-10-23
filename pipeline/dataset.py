@@ -22,6 +22,13 @@ from .metrics import (
 )
 
 FIX_RE = re.compile(r"\b(revert|reverts|reverted|hotfix|hot-fix|fix|fixes|fixed|bugfix)\b", re.IGNORECASE)
+# termos das release notes (heurística v6): correção x funcionalidade
+NOTES_FIX_RE = re.compile(
+    r"\b(fix|fixes|fixed|bug|bugfix|hotfix|regression|crash|patch|revert|security|cve)\b", re.IGNORECASE
+)
+NOTES_FEATURE_RE = re.compile(
+    r"\b(feature|features|new|added|add|introduc\w*|support|enhancement\w*|improvement\w*)\b", re.IGNORECASE
+)
 SEMVER_RE = re.compile(r"(\d+)\.(\d+)(?:\.(\d+))?")
 CORRECTIVE_WINDOW = timedelta(days=7)
 
@@ -64,6 +71,41 @@ def is_corrective(previous_tag: str, tag: str, messages: list[str]) -> bool:
     patch = is_patch_bump(previous_tag, tag)
     fix = has_fix_commit(messages)
     return fix if patch is None else (patch and fix)
+
+
+def is_line_patch(tag: str | None) -> bool | None:
+    """True se a versão é um patch da própria linha MAJOR.MINOR (2.3.1, 8.4.15). None fora do SemVer.
+
+    Não depende da release anterior por data: em repositórios que mantêm várias linhas
+    (ex.: 8.19.9 publicada depois da 9.3.0), a anterior por data é de outra linha.
+    """
+    version = parse_semver(tag)
+    return None if version is None else version[2] > 0
+
+
+def notes_terms(body: str | None) -> tuple[int, int]:
+    """(nº de termos de correção, nº de termos de funcionalidade) nas release notes."""
+    body = body or ""
+    return len(NOTES_FIX_RE.findall(body)), len(NOTES_FEATURE_RE.findall(body))
+
+
+def is_corrective_v6(tag: str, body: str | None) -> bool:
+    """Heurística v6 de release corretiva (versão final, validada na amostra-ouro).
+
+    Corretiva = patch da própria linha (PATCH > 0) E as release notes têm pelo menos tantos
+    termos de correção quanto de funcionalidade. Fora do SemVer: mais termos de correção.
+    """
+    fix_terms, feature_terms = notes_terms(body)
+    line_patch = is_line_patch(tag)
+    if line_patch is None:
+        return fix_terms > feature_terms
+    return line_patch and fix_terms >= feature_terms
+
+
+def same_line(tag_a: str, tag_b: str) -> bool:
+    """True se as duas versões são da mesma linha MAJOR.MINOR (ou se alguma não é SemVer)."""
+    a, b = parse_semver(tag_a), parse_semver(tag_b)
+    return a is None or b is None or a[:2] == b[:2]
 
 
 def median_or_none(values):
@@ -181,19 +223,24 @@ def analyse_repository(data: dict) -> dict:
             msgs = [c.get("message") or "" for c in (comp or {}).get("commits", [])]
             row["patch_bump"] = is_patch_bump(prev["tag_name"], release["tag_name"])
             row["has_fix_commit"] = has_fix_commit(msgs)
-            corrective = is_corrective(prev["tag_name"], release["tag_name"], msgs)
-        row["is_corrective_v1"] = corrective
+            row["line_patch"] = is_line_patch(release["tag_name"])
+            row["notes_fix_terms"], row["notes_feature_terms"] = notes_terms(release.get("body"))
+            row["is_corrective_v1"] = is_corrective(prev["tag_name"], release["tag_name"], msgs)
+            corrective = is_corrective_v6(release["tag_name"], release.get("body"))
+        else:
+            row["is_corrective_v1"] = None
+        row["is_corrective"] = corrective
         corrective_count += bool(corrective)
         if published > end - CORRECTIVE_WINDOW:
             row["cfr_b_status"] = "censored"
             continue
-        nxt = ordered_stable[index + 1] if index + 1 < len(ordered_stable) else None
+        # a correção de R é a próxima release da mesma linha MAJOR.MINOR: em repositórios com
+        # várias linhas, a próxima por data pode ser um backport de outra linha
+        nxt = next((r for r in ordered_stable[index + 1:] if same_line(release["tag_name"], r["tag_name"])), None)
         evaluated += 1
         is_failed = False
         if nxt is not None and parse_dt(nxt["published_at"]) - published <= CORRECTIVE_WINDOW:
-            comp = compares.get((release["tag_name"], nxt["tag_name"]))
-            msgs = [c.get("message") or "" for c in (comp or {}).get("commits", [])]
-            is_failed = is_corrective(release["tag_name"], nxt["tag_name"], msgs)
+            is_failed = is_corrective_v6(nxt["tag_name"], nxt.get("body"))
         row["cfr_b_status"] = "failed" if is_failed else "ok"
         failed += is_failed
 

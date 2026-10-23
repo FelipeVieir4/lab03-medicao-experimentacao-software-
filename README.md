@@ -170,7 +170,9 @@ O primeiro calcula o kappa de Fleiss das três dimensões, gera `data/gold/conse
 lista em `data/gold/divergencias.csv` os casos sem maioria. Depois da reunião, preencha a
 coluna `decisao` e rode o comando de novo. O segundo compara cada versão da heurística com
 o consenso (precisão, recall e F1, meta F1 ≥ 0,70). Os resultados ficam em
-`reports/resultados/validacao/`.
+`reports/resultados/validacao/`. A versão adotada (v6) usa as release notes; se o
+`releases.csv` ainda não tiver as colunas `notes_*`, rode
+`python -m analysis.heuristica --raw data/raw/repos` para calculá-las a partir dos JSONs brutos.
 
 ## Como a seleção economiza cota
 
