@@ -1,0 +1,13 @@
+pair,from,Elite,High,Medium,Low
+C1 × C2,Elite,4,15,3,1
+C1 × C2,High,3,108,43,0
+C1 × C2,Medium,0,24,140,4
+C1 × C2,Low,0,1,5,11
+C1 × C3,Elite,17,7,0,0
+C1 × C3,High,6,137,12,0
+C1 × C3,Medium,0,43,124,1
+C1 × C3,Low,0,0,7,10
+C2 × C3,Elite,5,2,0,0
+C2 × C3,High,16,126,6,0
+C2 × C3,Medium,1,57,132,1
+C2 × C3,Low,0,1,5,10

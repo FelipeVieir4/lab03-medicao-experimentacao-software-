@@ -1,0 +1,16 @@
+pair,metric,label,n,changed,changed_pct,better_in_second,worse_in_second,two_or_more_levels,kappa_linear
+C1 × C2,overall,Geral,362,99,27.34806629834254,33,66,5,0.5643752721938249
+C1 × C2,deployment_frequency,Deployment frequency,383,45,11.74934725848564,45,0,5,0.843946086021155
+C1 × C2,lead_time_days,Lead time,383,168,43.86422976501306,92,76,20,0.5534795426939065
+C1 × C2,change_failure_rate,CFR,381,215,56.43044619422572,34,181,111,0.033570926613793795
+C1 × C2,recovery_hours,Tempo de recuperação,364,0,0.0,0,0,0,1.0
+C1 × C3,overall,Geral,364,76,20.87912087912088,56,20,0,0.7000802272382316
+C1 × C3,deployment_frequency,Deployment frequency,383,98,25.587467362924283,97,1,20,0.6437915472342501
+C1 × C3,lead_time_days,Lead time,383,157,40.992167101827675,78,79,14,0.5901087946966408
+C1 × C3,change_failure_rate,CFR,383,0,0.0,0,0,0,1.0
+C1 × C3,recovery_hours,Tempo de recuperação,364,0,0.0,0,0,0,1.0
+C2 × C3,overall,Geral,362,89,24.585635359116022,80,9,2,0.6193348586748018
+C2 × C3,deployment_frequency,Deployment frequency,383,54,14.099216710182768,53,1,14,0.7832620724346077
+C2 × C3,lead_time_days,Lead time,383,43,11.22715404699739,11,32,9,0.8733574184067112
+C2 × C3,change_failure_rate,CFR,381,215,56.43044619422572,181,34,111,0.033570926613793795
+C2 × C3,recovery_hours,Tempo de recuperação,364,0,0.0,0,0,0,1.0
