@@ -21,3 +21,5 @@ data/processed/release_commits.csv.gz
 data/processed/workflow_runs.csv
 data/smoke/
 data/cache_broken/
+data/bench/
+data/bench7/
