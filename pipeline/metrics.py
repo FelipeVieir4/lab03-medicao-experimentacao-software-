@@ -120,5 +120,8 @@ def classify_repository(metrics: dict[str, float]) -> str:
     categories = [classify_metric(metric, value) for metric, value in metrics.items()]
     if len(categories) != 4:
         raise ValueError("são necessárias exatamente quatro métricas")
-    score = sorted(points[category] for category in categories)[1]
+    # Mediana de quatro valores = média dos dois do meio, arredondada para baixo.
+    # Ex.: (1, 1, 3, 4) -> (1 + 3) // 2 = 2 (Medium). Pegar só o 2º menor daria 1 (Low).
+    ordered = sorted(points[category] for category in categories)
+    score = (ordered[1] + ordered[2]) // 2
     return {4: "Elite", 3: "High", 2: "Medium", 1: "Low"}[score]

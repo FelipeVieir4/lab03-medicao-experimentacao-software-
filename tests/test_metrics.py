@@ -75,3 +75,18 @@ def test_dora_thresholds_and_repository_classification():
             "recovery_hours": 12,
         }
     ) == "High"
+
+
+def test_classify_repository_median_rounds_down():
+    # exemplo do enunciado: notas (4, 3, 3, 1) -> mediana 3 -> High
+    assert classify_repository(
+        {"deployment_frequency": 7, "lead_time_days": 2, "change_failure_rate": 0.2, "recovery_hours": 200}
+    ) == "High"
+    # notas (1, 1, 3, 4): mediana (1 + 3) / 2 = 2 -> Medium (e não Low)
+    assert classify_repository(
+        {"deployment_frequency": 0.1, "lead_time_days": 40, "change_failure_rate": 0.2, "recovery_hours": 0.5}
+    ) == "Medium"
+    # notas (2, 2, 3, 4): mediana 2,5 -> arredonda para baixo -> Medium
+    assert classify_repository(
+        {"deployment_frequency": 0.5, "lead_time_days": 10, "change_failure_rate": 0.2, "recovery_hours": 0.5}
+    ) == "Medium"
