@@ -2,7 +2,7 @@
 
 ## Resumo
 
-Este trabalho mede as métricas DORA em 383 repositórios open source populares que usam GitHub Actions, a partir de proxies: releases publicadas no lugar de deploys e execuções de CI no lugar de falhas em produção. Os dados foram coletados por um pipeline próprio e reprodutível, numa janela de 12 meses. O repositório típico publica uma release a cada duas semanas, tem lead time de cerca de 11 dias e recupera o pipeline em menos de 3 horas. A idade do repositório é a característica mais associada ao desempenho, e a popularidade não mostrou associação. A análise de sensibilidade mostra que de 21% a 27% dos repositórios mudam de categoria DORA quando a definição operacional muda, e que as conclusões sobre estabilidade dependem do proxy de falha escolhido.
+Este trabalho mede as métricas DORA em 383 repositórios open source populares que usam GitHub Actions, a partir de proxies: releases publicadas no lugar de deploys e execuções de CI no lugar de falhas em produção. Os dados foram coletados por um pipeline próprio e reprodutível, numa janela de 12 meses. O repositório típico publica uma release a cada duas semanas, tem lead time de cerca de 11 dias e recupera o pipeline em menos de 3 horas. A idade do repositório é a característica mais associada ao desempenho, e a popularidade não mostrou associação. A análise de sensibilidade mostra que de 21% a 30% dos repositórios mudam de categoria DORA quando a definição operacional muda, e que as conclusões sobre estabilidade dependem do proxy de falha escolhido.
 
 ## 1. Introdução
 
@@ -207,7 +207,7 @@ Esta seção apresenta os resultados das RQs 01 a 05 sobre a amostra final de **
 | RQ 02 | Lead time (a): por release | dias | 383 | 10,67 | 3,82 | 38,11 | 34,29 |
 | RQ 02 | Lead time (b): por commit | dias | 383 | 11,72 | 3,17 | 48,93 | 45,76 |
 | RQ 03 | CFR (a): falha de pipeline | proporção | 383 | 0,049 | 0,023 | 0,113 | 0,089 |
-| RQ 03 | CFR (b): falha de entrega | proporção | 381 | 0,167 | 0,024 | 0,364 | 0,340 |
+| RQ 03 | CFR (b): falha de entrega | proporção | 381 | 0,200 | 0,056 | 0,400 | 0,344 |
 | RQ 04 | Tempo de recuperação | horas | 364 | 2,63 | 1,11 | 6,68 | 5,56 |
 
 **Tabela 8. Classificação DORA na combinação C1 (% sobre os repositórios classificados).**
@@ -246,11 +246,9 @@ A hipótese de que a variante (b) seria menor e menos sensível a commits antigo
 As duas variantes de CFR medem coisas diferentes e produzem valores bem diferentes:
 
 - **CFR (a), falha de pipeline:** mediana de **4,9%** (IQR de 2,3% a 11,3%). Com esse valor, 82,5% dos repositórios caem na faixa Elite (≤ 15%), o que torna o CFR (a) a métrica menos discriminante de C1.
-- **CFR (b), falha de entrega:** mediana de **16,7%** (IQR de 2,4% a 36,4%), mais de três vezes a do CFR (a) e com dispersão quase quatro vezes maior. Com essa variante, só 48,0% dos repositórios seriam Elite. Além disso, 87 repositórios (22,8%) não tiveram nenhuma release seguida de correção em até 7 dias (CFR (b) = 0).
+- **CFR (b), falha de entrega:** mediana de **20,0%** (IQR de 5,6% a 40,0%), cerca de quatro vezes a do CFR (a) e com dispersão quase quatro vezes maior. Com essa variante, só 43,0% dos repositórios seriam Elite. Além disso, 80 repositórios (21,0%) não tiveram nenhuma release seguida de correção em até 7 dias (CFR (b) = 0).
 
-A correlação de Spearman entre as variantes é fraca: ρ = 0,138 (p = 0,007, n = 381). Um repositório com pipeline instável não tende a ser o mesmo que publica releases corretivas, o que confirma a hipótese de que as variantes não são equivalentes. O CFR (a) registra qualquer falha de CI no default branch, inclusive testes instáveis (*flaky*) e falhas de lint corrigidas em minutos, que nunca chegam ao usuário. Já o CFR (b) se aproxima mais da definição DORA, mas depende da heurística de release corretiva, validada contra a amostra-ouro na seção 4.4.
-
-> *Os valores do CFR (b) nesta seção, na 5.5, na 5.7 e na 5.8 ainda foram calculados com a heurística v1 (F1 = 0,602). Eles serão atualizados com a v6 (F1 = 0,781) após o recálculo do dataset (#22).*
+A correlação de Spearman entre as variantes é fraca: ρ = 0,147 (p = 0,004, n = 381). Um repositório com pipeline instável não tende a ser o mesmo que publica releases corretivas, o que confirma a hipótese de que as variantes não são equivalentes. O CFR (a) registra qualquer falha de CI no default branch, inclusive testes instáveis (*flaky*) e falhas de lint corrigidas em minutos, que nunca chegam ao usuário. Já o CFR (b) se aproxima mais da definição DORA, mas depende da heurística de release corretiva, validada contra a amostra-ouro na seção 4.4 (versão v6, F1 = 0,781).
 
 Por censura, **1.306 das 27.571 releases (4,74%)**, de 161 repositórios, ficaram fora do denominador do CFR (b) por terem sido publicadas nos últimos 7 dias da janela. Dois repositórios ficaram sem CFR (b) porque todas as suas releases caíram nesse período: `expo/expo`, com 267 releases entre 29/09 e 01/10/2026, e `Alishahryar1/free-claude-code`. No caso do `expo/expo`, a verificação mostrou que não se trata de erro de coleta: o projeto, um monorepo, só passou a publicar releases no GitHub em 29/09/2026, e publica uma release por pacote. Isso também infla a sua deployment frequency (5,1 por semana) e é um exemplo extremo de release que não equivale a deploy.
 
@@ -269,13 +267,13 @@ Dos 36.785 episódios de falha, **382 (1,04%) foram censurados**, isto é, não 
 | Variante do CFR | n | ρ | p-valor | Interpretação (α = 0,05) |
 |---|---:|---:|---:|---|
 | (a) falha de pipeline | 383 | 0,161 | 0,002 | fraca positiva, significativa |
-| (b) falha de entrega | 381 | 0,507 | < 0,001 | moderada positiva, significativa |
+| (b) falha de entrega | 381 | 0,605 | < 0,001 | moderada positiva, significativa |
 
 ![Dispersão entre deployment frequency e CFR](resultados/rq05/dispersao.png)
 
 *Figura 2. Dispersão entre deployment frequency (eixo x em escala logarítmica) e CFR nas variantes (a) e (b).*
 
-Nas duas variantes, a correlação é **positiva**: repositórios que publicam mais releases também tendem a falhar mais. A intensidade, porém, depende da definição. Com o CFR (a), a relação é fraca (ρ = 0,161), o que está de acordo com a hipótese de relação fraca ou inexistente. Com o CFR (b), a relação é moderada (ρ = 0,507) e contraria a hipótese.
+Nas duas variantes, a correlação é **positiva**: repositórios que publicam mais releases também tendem a falhar mais. A intensidade, porém, depende da definição. Com o CFR (a), a relação é fraca (ρ = 0,161), o que está de acordo com a hipótese de relação fraca ou inexistente. Com o CFR (b), a relação é moderada (ρ = 0,605) e contraria a hipótese.
 
 Parte dessa diferença pode ser um artefato da própria definição operacional. O CFR (b) só marca uma release como falha se a próxima sair em até 7 dias, e repositórios que publicam várias releases por semana têm, por construção, mais oportunidades de cumprir essa condição. Assim, o CFR (b) não é independente da frequência de deploy. Com esses proxies, os dados não sustentam a afirmação do DORA de que velocidade e estabilidade não competem entre si. Ainda assim, trata-se de correlação, e não de causalidade, e o efeito do proxy deve ser aprofundado na Discussão.
 
@@ -325,17 +323,17 @@ As três combinações da Tabela 3 foram classificadas pelos mesmos cortes da di
 | Combinação | n | Elite | High | Medium | Low |
 |---|---:|---:|---:|---:|---:|
 | C1: release, lead time (a), CFR (a) | 364 | 24 (6,6%) | 155 (42,6%) | 168 (46,2%) | 17 (4,7%) |
-| C2: release + pré-release, lead time (b), CFR (b) | 362 | 7 (1,9%) | 148 (40,9%) | 191 (52,8%) | 16 (4,4%) |
+| C2: release + pré-release, lead time (b), CFR (b) | 362 | 6 (1,7%) | 144 (39,8%) | 191 (52,8%) | 21 (5,8%) |
 | C3: tag, lead time (b), CFR (a) | 364 | 23 (6,3%) | 187 (51,4%) | 143 (39,3%) | 11 (3,0%) |
 
 **Tabela 12. Repositórios que mudam de categoria e kappa de Cohen ponderado (linear) entre as combinações.**
 
 | Métrica | C1 × C2: mudaram | κ | C1 × C3: mudaram | κ | C2 × C3: mudaram | κ |
 |---|---:|---:|---:|---:|---:|---:|
-| **Geral** | **27,3%** | **0,564** | **20,9%** | **0,700** | **24,6%** | **0,619** |
+| **Geral** | **29,8%** | **0,518** | **20,9%** | **0,700** | **26,0%** | **0,590** |
 | Deployment frequency | 11,7% | 0,844 | 25,6% | 0,644 | 14,1% | 0,783 |
 | Lead time | 43,9% | 0,553 | 41,0% | 0,590 | 11,2% | 0,873 |
-| CFR | 56,4% | 0,034 | 0,0% | 1,000 | 56,4% | 0,034 |
+| CFR | 60,4% | 0,033 | 0,0% | 1,000 | 60,4% | 0,033 |
 
 *O tempo de recuperação é o mesmo nas três combinações e não muda. Na C1 × C3, o CFR é o (a) nas duas.*
 
@@ -343,31 +341,31 @@ As três combinações da Tabela 3 foram classificadas pelos mesmos cortes da di
 
 *Figura 4. Distribuição da classificação geral nas três combinações.*
 
-Entre **um quinto e pouco mais de um quarto** dos repositórios muda de categoria geral quando a definição muda: 27,3% entre C1 e C2, 20,9% entre C1 e C3 e 24,6% entre C2 e C3. Quase todas as mudanças são de um nível só (por exemplo, High → Medium), por isso o kappa ponderado fica entre moderado e substancial (0,564 a 0,700). Só 5 repositórios (1,4%) pularam dois níveis ou mais entre C1 e C2, 2 entre C2 e C3 e nenhum entre C1 e C3.
+Entre **um quinto e quase um terço** dos repositórios muda de categoria geral quando a definição muda: 29,8% entre C1 e C2, 20,9% entre C1 e C3 e 26,0% entre C2 e C3. Quase todas as mudanças são de um nível só (por exemplo, High → Medium), por isso o kappa ponderado fica entre moderado e substancial (0,518 a 0,700). Só 9 repositórios (2,5%) pularam dois níveis ou mais entre C1 e C2, 6 entre C2 e C3 e nenhum entre C1 e C3.
 
-A direção da mudança depende da combinação. Da C1 para a C2, 66 repositórios pioram e 33 melhoram, e a faixa Elite cai de 6,6% para 1,9%. Da C1 para a C3, 56 melhoram e 20 pioram, porque a frequência medida por tags é sempre maior ou igual à medida por releases (97 repositórios sobem de faixa nessa métrica e só 1 desce).
+A direção da mudança depende da combinação. Da C1 para a C2, 74 repositórios pioram e 34 melhoram, e a faixa Elite cai de 6,6% para 1,7%. Da C1 para a C3, 56 melhoram e 20 pioram, porque a frequência medida por tags é sempre maior ou igual à medida por releases (97 repositórios sobem de faixa nessa métrica e só 1 desce).
 
-Olhando métrica por métrica, a mais frágil é o **CFR**. Trocar o proxy de CI pelo proxy de entrega muda a categoria de 56,4% dos repositórios, e o kappa (0,034) indica concordância apenas leve, quase a que se esperaria por acaso. O **lead time** vem em seguida: trocar a variante (a) pela (b) muda 41% a 44% das categorias. A **frequência de deploy** é a mais estável: incluir pré-releases muda 11,7% e trocar releases por tags muda 25,6%.
+Olhando métrica por métrica, a mais frágil é o **CFR**. Trocar o proxy de CI pelo proxy de entrega muda a categoria de 60,4% dos repositórios, e o kappa (0,033) indica concordância apenas leve, quase a que se esperaria por acaso. O **lead time** vem em seguida: trocar a variante (a) pela (b) muda 41% a 44% das categorias. A **frequência de deploy** é a mais estável: incluir pré-releases muda 11,7% e trocar releases por tags muda 25,6%.
 
-Uma observação de método: o kappa ponderado depende da ordem das categorias. O `cohen_kappa_score` do scikit-learn, sem o parâmetro `labels`, ordena os rótulos alfabeticamente (Elite, High, Low, Medium), e a ponderação linear passa a tratar Low como vizinho de High. Com essa ordem, o kappa geral de C1 × C2 sairia 0,558, e o do lead time, 0,457 em vez de 0,553. Por isso o cálculo usa explicitamente a ordem Low < Medium < High < Elite.
+Uma observação de método: o kappa ponderado depende da ordem das categorias. O `cohen_kappa_score` do scikit-learn, sem o parâmetro `labels`, ordena os rótulos alfabeticamente (Elite, High, Low, Medium), e a ponderação linear passa a tratar Low como vizinho de High. Com essa ordem, o kappa geral de C1 × C2 sairia 0,516 em vez de 0,518, e o do lead time, 0,457 em vez de 0,553. Por isso o cálculo usa explicitamente a ordem Low < Medium < High < Elite.
 
 
 ### 5.8 RQ 08 (bônus): rework rate
 
-O *rework rate* é a proporção de releases corretivas sobre o total de releases estáveis da janela, usando a mesma heurística de release corretiva do CFR (b). Resultados gerados por `python -m analysis.rework` (valores ainda da heurística v1; ver a nota da seção 5.3).
+O *rework rate* é a proporção de releases corretivas sobre o total de releases estáveis da janela, usando a mesma heurística de release corretiva do CFR (b) (v6). Resultados gerados por `python -m analysis.rework`.
 
 **Tabela 13. Rework rate e CFR (b).**
 
 | Métrica | Definição | n | Mediana | Q1 | Q3 | IQR | Repositórios com valor 0 |
 |---|---|---:|---:|---:|---:|---:|---:|
-| Rework rate | releases corretivas / releases | 383 | 0,444 | 0,215 | 0,725 | 0,509 | 4,4% |
-| CFR (b) | releases seguidas de corretiva em ≤ 7 dias / releases avaliadas | 381 | 0,167 | 0,024 | 0,364 | 0,340 | 22,8% |
+| Rework rate | releases corretivas / releases | 383 | 0,500 | 0,300 | 0,716 | 0,416 | 4,7% |
+| CFR (b) | releases seguidas de corretiva em ≤ 7 dias / releases avaliadas | 381 | 0,200 | 0,056 | 0,400 | 0,344 | 21,0% |
 
 ![Rework rate e CFR (b)](resultados/rq08/rework.png)
 
 *Figura 5. À esquerda, distribuições do rework rate e do CFR (b) (caixas: Q1, mediana e Q3; bigodes: percentis 5 e 95). À direita, dispersão entre as duas métricas; a linha tracejada é y = x.*
 
-No repositório típico, **44,4% das releases são corretivas**, quase três vezes a mediana do CFR (b) (16,7%). As duas métricas estão moderadamente correlacionadas (ρ = 0,484, p < 0,001, n = 381), mas o rework rate supera o CFR (b) em 85,8% dos repositórios e empata em 9,2%. Por isso, quase todos os pontos da Figura 5 ficam abaixo da diagonal.
+No repositório típico, **50,0% das releases são corretivas**, duas vezes e meia a mediana do CFR (b) (20,0%). As duas métricas estão moderadamente correlacionadas (ρ = 0,446, p < 0,001, n = 381), mas o rework rate supera o CFR (b) em 87,9% dos repositórios e empata em 10,5%. Por isso, quase todos os pontos da Figura 5 ficam abaixo da diagonal.
 
 A diferença vem do que cada métrica conta:
 
@@ -376,7 +374,7 @@ A diferença vem do que cada métrica conta:
 - **Sequências de patches:** uma série como 2.3.1 → 2.3.2 → 2.3.3 conta três vezes no rework rate. No CFR (b), cada release só falha se a seguinte sair em até 7 dias.
 - **Censura:** o rework rate não precisa observar o que vem depois da release, então não tem censura no fim da janela.
 
-O rework rate mede, portanto, **quanto do esforço de entrega é gasto com retrabalho**, enquanto o CFR (b) mede **quantas entregas precisaram ser corrigidas logo em seguida**. O valor alto do rework rate também reflete que a heurística v1 era ampla, já que quase toda release de patch tem algum commit com `fix`. Com a v6, mais restritiva, espera-se um rework rate menor.
+O rework rate mede, portanto, **quanto do esforço de entrega é gasto com retrabalho**, enquanto o CFR (b) mede **quantas entregas precisaram ser corrigidas logo em seguida**. A v6 marca mais releases como corretivas do que a v1 (14.285 contra 10.123 das 27.500 releases com release anterior), porque passa a reconhecer os patches das linhas de manutenção, que a v1 comparava com a release anterior por data e deixava de fora. Por isso, o rework rate e o CFR (b) subiram em relação aos valores calculados com a v1 (medianas de 44,4% e 16,7%).
 
 ## 6. Discussão
 
@@ -388,11 +386,11 @@ O rework rate mede, portanto, **quanto do esforço de entrega é gasto com retra
 |---|---|---|
 | 01 | Frequências muito diferentes, concentradas em poucos projetos | **Confirmada.** Os 10% mais ativos concentram 57,0% das releases |
 | 02 | Lead time (b) menor e menos sensível a commits antigos | **Parcial.** Vale em 60,6% dos repositórios, mas a variante (b) é mais sensível ao tamanho das releases |
-| 03 | CFR (a) e CFR (b) não são equivalentes | **Confirmada.** Medianas de 4,9% e 16,7%, ρ = 0,138 entre elas e κ = 0,034 nas categorias |
+| 03 | CFR (a) e CFR (b) não são equivalentes | **Confirmada.** Medianas de 4,9% e 20,0%, ρ = 0,147 entre elas e κ = 0,033 nas categorias |
 | 04 | Parte dos episódios fica censurada | **Confirmada, em escala pequena** (1,04% dos episódios) |
-| 05 | Relação fraca ou inexistente entre frequência e falha | **Depende do proxy.** Fraca com o CFR (a) (ρ = 0,161), moderada com o CFR (b) (ρ = 0,507) |
+| 05 | Relação fraca ou inexistente entre frequência e falha | **Depende do proxy.** Fraca com o CFR (a) (ρ = 0,161), moderada com o CFR (b) (ρ = 0,605) |
 | 06 | Popularidade, idade, contribuidores e linguagem associados ao desempenho | **Parcial.** Idade, contribuidores e linguagem, sim; popularidade, não. O tipo do projeto não teve diferença significativa, mas só cobre 60 repositórios |
-| 07 | As categorias podem mudar com a definição | **Confirmada.** 20,9% a 27,3% dos repositórios mudam de categoria geral |
+| 07 | As categorias podem mudar com a definição | **Confirmada.** 20,9% a 29,8% dos repositórios mudam de categoria geral |
 
 ### 6.2 O que surpreendeu
 
@@ -408,9 +406,9 @@ A RQ 07 permite separar o que é robusto do que depende da definição:
 
 - **Robustas:** a frequência de deploy e o tempo de recuperação. A frequência muda pouco entre as definições (κ de 0,64 a 0,84), e as conclusões da RQ 01 (cauda longa, mediana de cerca de uma release a cada duas semanas) se mantêm. O tempo de recuperação não depende de nenhuma das escolhas testadas.
 - **Moderadamente robustas:** o lead time. As categorias mudam em cerca de 40% dos repositórios entre as variantes (a) e (b), mas quase sempre para uma faixa vizinha. A associação com a idade aparece nas duas variantes (ε² = 0,317 na (a) e 0,326 na (b)), assim como a associação com os contribuidores (0,151 e 0,199).
-- **Não robustas:** tudo o que envolve CFR. A categoria de CFR muda em mais da metade dos repositórios, a RQ 05 muda de "relação fraca" para "relação moderada" conforme o proxy, e a RQ 06 também muda. Com o CFR (a), a idade não tem efeito significativo. Com o CFR (b), numa análise exploratória fora da família corrigida, o efeito da idade passa a ser médio (ε² = 0,183): os repositórios novos teriam mais releases corretivas. Esse resultado é coerente com a RQ 05, já que os repositórios novos também publicam mais e, por construção, têm mais chances de ter duas releases em menos de 7 dias.
+- **Não robustas:** tudo o que envolve CFR. A categoria de CFR muda em mais da metade dos repositórios, a RQ 05 muda de "relação fraca" para "relação moderada" conforme o proxy, e a RQ 06 também muda. Com o CFR (a), a idade não tem efeito significativo. Com o CFR (b), numa análise exploratória fora da família corrigida, o efeito da idade passa a ser médio (ε² = 0,113): os repositórios novos teriam mais releases corretivas. Esse resultado é coerente com a RQ 05, já que os repositórios novos também publicam mais e, por construção, têm mais chances de ter duas releases em menos de 7 dias.
 
-Em resumo, a **classificação geral** de um repositório é razoavelmente estável (κ ≥ 0,56 e mudanças quase sempre de um nível), mas as conclusões sobre **estabilidade** dependem da escolha do proxy de falha. Afirmações como "projetos que entregam mais rápido falham mais" ou "não falham mais" não podem ser feitas com esses dados sem dizer qual CFR foi usado. Isso reforça a principal limitação do estudo: o GitHub não registra falhas em produção, e cada proxy captura uma parte diferente do conceito.
+Em resumo, a **classificação geral** de um repositório é razoavelmente estável (κ ≥ 0,52 e mudanças quase sempre de um nível), mas as conclusões sobre **estabilidade** dependem da escolha do proxy de falha. Afirmações como "projetos que entregam mais rápido falham mais" ou "não falham mais" não podem ser feitas com esses dados sem dizer qual CFR foi usado. Isso reforça a principal limitação do estudo: o GitHub não registra falhas em produção, e cada proxy captura uma parte diferente do conceito.
 
 ## 7. Ameaças à validade
 
